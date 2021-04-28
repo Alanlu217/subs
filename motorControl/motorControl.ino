@@ -12,9 +12,10 @@
 
 // PWM pins : 3, 5, 6, 9, 10, 11?
 int pwmFrequency = 20000;
+const int MAX_BYTES = 6;
 
 // Variables to hold data from serial
-int data[6];
+uint8_t data[MAX_BYTES];
 
 void setup() {
   InitTimersSafe();
@@ -39,11 +40,11 @@ void setup() {
 }
 
 void loop() {
-  if (Serial.available() >= 6) {
-    digitalWrite(LED_BUILTIN, HIGH);
-    for (int i = 0; i < 6; i ++) {
-      data[i] = Serial.read();
-    }
+  int ret = Serial.readBytes(data, MAX_BYTES);
+  while (Serial.available() > 0) {
+    Serial.read();
+  }
+  if (ret == MAX_BYTES) {
     pwmWrite(pwmPin1, data[1]);
     switch (data[0]) {
     case 0: digitalWrite(inA1, LOW); digitalWrite(inB1, HIGH); break;
