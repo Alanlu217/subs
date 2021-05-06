@@ -119,25 +119,25 @@ while stop != True:
 
   val = max(min(-js.getAxis(yjoy)+js.getAxis(xjoy), 255), -255)
   if val > 1: msg[0] = 2
-  elif val < -1: msg[0] = 0
-  elif val == 0: msg[0] = 1
+  elif val < -1: msg[0] = 1
+  elif val == 0: msg[0] = 0
   msg[1] = abs(val)
 
   val = max(min(-js.getAxis(yjoy)-js.getAxis(xjoy), 255), -255)
   if val > 1: msg[2] = 2
-  elif val < -1: msg[2] = 0
-  elif val == 0: msg[2] = 1
+  elif val < -1: msg[2] = 1
+  elif val == 0: msg[2] = 0
   msg[3] = abs(val)
 
   val = int((js.getAxis(5) - js.getAxis(4))/2)
   if val > 1: msg[4] = 2
-  elif val < -1: msg[4] = 0
-  elif val == 0: msg[4] = 1
+  elif val < -1: msg[4] = 1
+  elif val == 0: msg[4] = 0
   msg[5] = abs(val)
 
   # Make sure message is valid
   if len(msg) != 6:
-    msg = [1, 0, 1, 0, 1, 0]
+    msg = [0, 0, 0, 0, 0, 0]
   s.write(msg)
   print(msg)
   pg.display.flip()

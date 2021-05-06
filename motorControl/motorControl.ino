@@ -47,20 +47,20 @@ void loop() {
   if (ret == MAX_BYTES) {
     pwmWrite(pwmPin1, data[1]);
     switch (data[0]) {
-    case 0: digitalWrite(inA1, LOW); digitalWrite(inB1, HIGH); break;
-    case 1: digitalWrite(inA1, LOW); digitalWrite(inB1, LOW); break;
+    case 1: digitalWrite(inA1, LOW); digitalWrite(inB1, HIGH); break;
+    case 0: digitalWrite(inA1, LOW); digitalWrite(inB1, LOW); break;
     case 2: digitalWrite(inA1, HIGH); digitalWrite(inB1, LOW); break;
     }
     pwmWrite(pwmPin2, data[3]);
     switch (data[2]) {
-    case 0: digitalWrite(inA2, LOW); digitalWrite(inB2, HIGH); break;
-    case 1: digitalWrite(inA2, LOW); digitalWrite(inB2, LOW); break;
+    case 1: digitalWrite(inA2, LOW); digitalWrite(inB2, HIGH); break;
+    case 0: digitalWrite(inA2, LOW); digitalWrite(inB2, LOW); break;
     case 2: digitalWrite(inA2, HIGH); digitalWrite(inB2, LOW); break;
     }
     pwmWrite(pwmPin3, data[5]);
     switch (data[4]) {
-    case 0: digitalWrite(inA3, LOW); digitalWrite(inB3, HIGH); break;
-    case 1: digitalWrite(inA3, LOW); digitalWrite(inB3, LOW); break;
+    case 1: digitalWrite(inA3, LOW); digitalWrite(inB3, HIGH); break;
+    case 0: digitalWrite(inA3, LOW); digitalWrite(inB3, LOW); break;
     case 2: digitalWrite(inA3, HIGH); digitalWrite(inB3, LOW); break;
     }
   }
