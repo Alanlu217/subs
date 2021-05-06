@@ -2,6 +2,7 @@ import serial
 import pygame as pg
 import time
 from sys import argv, exit
+from pygame.locals import *
 
 def sign(val):
   if val == 0:
@@ -11,8 +12,9 @@ def sign(val):
 def map(x, in_min, in_max, out_min, out_max):
   return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min
 
+# Open serial port
 try:
-  ser = serial.Serial(argv[1], 115200)
+  s = serial.Serial(argv[1], 115200)
 except:
   print("Please provide the serial port and baudrate")
   print("If provided, please make sure the correct serial port has been selected")
@@ -32,12 +34,15 @@ class joystick():
     self.state = False
 
   def update(self):
+    # Update axis
     for i in range(0, self.js.get_numaxes()):
       n = round(self.js.get_axis(i)*255)
       if -5 < n < 5:
         self.axis[i] = 0
       else:
         self.axis[i] = n
+
+    # Update buttons
     for i in range(0, self.js.get_numbuttons()):
       self.btn[i] = self.js.get_button(i)
       if self.btn[i] == 1 and self.lastBtn[i] == 0:
@@ -45,9 +50,17 @@ class joystick():
       else:
         self.btnP[i] = 0
     self.lastBtn = self.btn[:]
+
+    # Change state if button 6 is pressed
     if self.btnP[5] == 1:
       if self.state == True: self.state = False
       elif self.state == False: self.state = True
+    
+    if self.state == False:
+      self.axis=[0, 0, 0, 0, 0, 0]
+      self.btn=[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+      self.btnP=[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+
 
   def getAxis(self, i):
     return self.axis[i]
@@ -60,16 +73,21 @@ class joystick():
 pg.init()
 pg.font.init()
 pg.joystick.init()
+
 clock = pg.time.Clock()
 
-scrnDM = (800, 600)
+scrnDM = (1200, 800)
 screen = pg.display.set_mode(scrnDM)
-fnt = pg.font.SysFont('Comic Sans MS', 30)
+fnt = pg.font.SysFont('Arial', 28)
 
 js = joystick()
 
 # Declare variables
 stop = False
+msg = [1, 0, 1, 0, 1, 0]
+
+xjoy = 0
+yjoy = 1
 
 # Main loop
 while stop != True:
@@ -77,19 +95,50 @@ while stop != True:
   js.update()
   keys = pg.key.get_pressed()
   events = pg.event.get()
-  if keys[pg.K_q]: stop = True
+  if keys[pg.K_q] and keys[pg.K_p]: stop = True
   if pg.event.get(pg.QUIT): stop = False
 
-  print(js.state)
+  # Start on Graphics
   screen.fill((0, 0, 0))
 
   # Draw Joystick containers
   pg.draw.circle(screen, (255, 10, 10), [120, 120], 100)
   pg.draw.circle(screen, (0, 0, 0), [120, 120], 98)
-  pg.draw.circle(screen, (255, 255, 255), [js.axis[0]/255*100+120, js.axis[1]/255*100+120], 5)
+  pg.draw.circle(screen, (255, 255, 255), [js.axis[0]/255*100+120, js.axis[1]/255*100+120], 15)
   pg.draw.circle(screen, (255, 10, 10), [scrnDM[0]-120, 120], 100)
   pg.draw.circle(screen, (0, 0, 0), [scrnDM[0]-120, 120], 98)
-  pg.draw.circle(screen, (255, 255, 255), [js.axis[2]/255*100+scrnDM[0]-120, js.axis[3]/255*100+120], 5)
+  pg.draw.circle(screen, (255, 255, 255), [js.axis[2]/255*100+scrnDM[0]-120, js.axis[3]/255*100+120], 15)
+  pg.draw.rect(screen, (255, 10, 10), [120, 280, 10, 255])
+  pg.draw.rect(screen, (255, 10, 10), [scrnDM[0]-120, 280, 10, 255])
+  pg.draw.circle(screen, (255, 255, 255), [125, 280+(js.getAxis(4)+255)/2], 15)
+  pg.draw.circle(screen, (255, 255, 255), [scrnDM[0]-115, 280+(js.getAxis(5)+255)/2], 15)
 
+  text = fnt.render(f'Enabled: {js.state}', False, (255, 255, 255))
+  screen.blit(text, [scrnDM[0]/2-100, 20])
+
+
+  val = max(min(-js.getAxis(yjoy)+js.getAxis(xjoy), 255), -255)
+  if val > 1: msg[0] = 2
+  elif val < -1: msg[0] = 0
+  elif val == 0: msg[0] = 1
+  msg[1] = abs(val)
+
+  val = max(min(-js.getAxis(yjoy)-js.getAxis(xjoy), 255), -255)
+  if val > 1: msg[2] = 2
+  elif val < -1: msg[2] = 0
+  elif val == 0: msg[2] = 1
+  msg[3] = abs(val)
+
+  val = int((js.getAxis(5) - js.getAxis(4))/2)
+  if val > 1: msg[4] = 2
+  elif val < -1: msg[4] = 0
+  elif val == 0: msg[4] = 1
+  msg[5] = abs(val)
+
+  # Make sure message is valid
+  if len(msg) != 6:
+    msg = [1, 0, 1, 0, 1, 0]
+  s.write(msg)
+  print(msg)
   pg.display.flip()
   clock.tick(60)
