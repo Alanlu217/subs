@@ -3,6 +3,7 @@ import pygame as pg
 import time
 from sys import argv, exit
 from pygame.locals import *
+import traceback
 
 def sign(val):
   if val == 0:
@@ -24,9 +25,7 @@ class joystick():
   def __init__(self):
     self.js = pg.joystick.Joystick(0)
     self.js.init()
-    if self.js.get_name() != 'PS4 Controller':
-      print("Wrong controller")
-      stop = True
+    print(self.js.get_name())
     self.axis=[0, 0, 0, 0, 0, 0]
     self.btn=[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
     self.btnP=[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
@@ -52,7 +51,7 @@ class joystick():
     self.lastBtn = self.btn[:]
 
     # Change state if button 6 is pressed
-    if self.btnP[5] == 1:
+    if self.btnP[stateKey] == 1:
       if self.state == True: self.state = False
       elif self.state == False: self.state = True
     
@@ -76,7 +75,7 @@ pg.joystick.init()
 
 clock = pg.time.Clock()
 
-scrnDM = (1200, 800)
+scrnDM = (600, 800)
 screen = pg.display.set_mode(scrnDM)
 fnt = pg.font.SysFont('Arial', 28)
 
@@ -88,57 +87,73 @@ msg = [1, 0, 1, 0, 1, 0]
 
 xjoy = 0
 yjoy = 1
+stateKey = 12
+LTrig = 3
+RTrig = 4
+power = 1
 
 # Main loop
-while stop != True:
-  # Get events
-  js.update()
-  keys = pg.key.get_pressed()
-  events = pg.event.get()
-  if keys[pg.K_q] and keys[pg.K_p]: stop = True
-  if pg.event.get(pg.QUIT): stop = False
+try:
+  while stop != True:
+    # Get events
+    js.update()
+    keys = pg.key.get_pressed()
+    events = pg.event.get()
+    if keys[pg.K_q] and keys[pg.K_p]: stop = True
+    if pg.event.get(pg.QUIT): stop = False
 
-  # Start on Graphics
-  screen.fill((0, 0, 0))
+    # Start on Graphics
+    screen.fill((0, 0, 0))
 
-  # Draw Joystick containers
-  pg.draw.circle(screen, (255, 10, 10), [120, 120], 100)
-  pg.draw.circle(screen, (0, 0, 0), [120, 120], 98)
-  pg.draw.circle(screen, (255, 255, 255), [js.axis[0]/255*100+120, js.axis[1]/255*100+120], 15)
-  pg.draw.circle(screen, (255, 10, 10), [scrnDM[0]-120, 120], 100)
-  pg.draw.circle(screen, (0, 0, 0), [scrnDM[0]-120, 120], 98)
-  pg.draw.circle(screen, (255, 255, 255), [js.axis[2]/255*100+scrnDM[0]-120, js.axis[3]/255*100+120], 15)
-  pg.draw.rect(screen, (255, 10, 10), [120, 280, 10, 255])
-  pg.draw.rect(screen, (255, 10, 10), [scrnDM[0]-120, 280, 10, 255])
-  pg.draw.circle(screen, (255, 255, 255), [125, 280+(js.getAxis(4)+255)/2], 15)
-  pg.draw.circle(screen, (255, 255, 255), [scrnDM[0]-115, 280+(js.getAxis(5)+255)/2], 15)
+    # Draw Joystick containers
+    pg.draw.circle(screen, (255, 10, 10), [120, 120], 100)
+    pg.draw.circle(screen, (0, 0, 0), [120, 120], 98)
+    pg.draw.circle(screen, (255, 255, 255), [js.axis[0]/255*100+120, js.axis[1]/255*100+120], 15)
+    pg.draw.circle(screen, (255, 10, 10), [scrnDM[0]-120, 120], 100)
+    pg.draw.circle(screen, (0, 0, 0), [scrnDM[0]-120, 120], 98)
+    pg.draw.circle(screen, (255, 255, 255), [js.axis[2]/255*100+scrnDM[0]-120, js.axis[5]/255*100+120], 15)
+    pg.draw.rect(screen, (255, 10, 10), [120, 280, 10, 255])
+    pg.draw.rect(screen, (255, 10, 10), [scrnDM[0]-120, 280, 10, 255])
+    pg.draw.circle(screen, (255, 255, 255), [125, 280+(js.getAxis(4)+255)/2], 15)
+    pg.draw.circle(screen, (255, 255, 255), [scrnDM[0]-115, 280+(js.getAxis(3)+255)/2], 15)
 
-  text = fnt.render(f'Enabled: {js.state}', False, (255, 255, 255))
-  screen.blit(text, [scrnDM[0]/2-100, 20])
+    text = fnt.render(f'Enabled: {js.state}', False, (255, 255, 255))
+    screen.blit(text, [scrnDM[0]/2-100, 20])
 
 
-  val = max(min(-js.getAxis(yjoy)+js.getAxis(xjoy), 255), -255)
-  if val > 1: msg[0] = 2
-  elif val < -1: msg[0] = 1
-  elif val == 0: msg[0] = 0
-  msg[1] = abs(val)
+    val = max(min(-js.getAxis(yjoy)+js.getAxis(xjoy), 255), -255)
+    if val > 1: msg[0] = 2
+    elif val < -1: msg[0] = 1
+    elif val == 0: msg[0] = 0
+    msg[1] = abs(val)
 
-  val = max(min(-js.getAxis(yjoy)-js.getAxis(xjoy), 255), -255)
-  if val > 1: msg[2] = 2
-  elif val < -1: msg[2] = 1
-  elif val == 0: msg[2] = 0
-  msg[3] = abs(val)
+    val = max(min(-js.getAxis(yjoy)-js.getAxis(xjoy), 255), -255)
+    if val > 1: msg[2] = 2
+    elif val < -1: msg[2] = 1
+    elif val == 0: msg[2] = 0
+    msg[3] = abs(val)
 
-  val = int((js.getAxis(5) - js.getAxis(4))/2)
-  if val > 1: msg[4] = 2
-  elif val < -1: msg[4] = 1
-  elif val == 0: msg[4] = 0
-  msg[5] = abs(val)
+    val = int(((js.getAxis(LTrig) - js.getAxis(RTrig))/2)*power)
+    if val > 1: msg[4] = 2
+    elif val < -1: msg[4] = 1
+    elif val == 0: msg[4] = 0
+    msg[5] = abs(val)
 
-  # Make sure message is valid
-  if len(msg) != 6:
-    msg = [0, 0, 0, 0, 0, 0]
-  s.write(msg)
-  print(msg)
-  pg.display.flip()
-  clock.tick(60)
+    total = msg[1] + msg[3] + msg[5]
+    while total > 282:
+      diff = round((total - 280)/3)
+      msg[1] -= diff; msg[1] = max(msg[1], 0)
+      msg[3] -= diff; msg[3] = max(msg[3], 0)
+      msg[5] -= diff; msg[5] = max(msg[5], 0)
+      total = msg[1] + msg[3] + msg[5]
+      
+    # Make sure message is valid
+    if len(msg) != 6:
+      msg = [0, 0, 0, 0, 0, 0]
+    print(msg)
+    s.write(msg)
+    pg.display.flip()
+    clock.tick(60)
+except:
+  s.write([0, 0, 0, 0, 0, 0])
+  traceback.print_exc()
