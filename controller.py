@@ -108,19 +108,21 @@ try:
     screen.fill((0, 0, 0))
 
     # Draw Joystick containers
-    pg.draw.circle(screen, (255, 10, 10), [120, 120], 100)
-    pg.draw.circle(screen, (0, 0, 0), [120, 120], 98)
-    pg.draw.circle(screen, (255, 255, 255), [js.axis[0]/255*100+120, js.axis[1]/255*100+120], 15)
-    pg.draw.circle(screen, (255, 10, 10), [scrnDM[0]-120, 120], 100)
-    pg.draw.circle(screen, (0, 0, 0), [scrnDM[0]-120, 120], 98)
-    pg.draw.circle(screen, (255, 255, 255), [js.axis[2]/255*100+scrnDM[0]-120, js.axis[5]/255*100+120], 15)
-    pg.draw.rect(screen, (255, 10, 10), [120, 280, 10, 255])
-    pg.draw.rect(screen, (255, 10, 10), [scrnDM[0]-120, 280, 10, 255])
-    pg.draw.circle(screen, (255, 255, 255), [125, 280+(js.getAxis(4)+255)/2], 15)
-    pg.draw.circle(screen, (255, 255, 255), [scrnDM[0]-115, 280+(js.getAxis(3)+255)/2], 15)
+    pg.draw.circle(screen, (10, 10, 255), [120, scrnDM[1]-120], 100)
+    pg.draw.circle(screen, (0, 0, 0), [120, scrnDM[1]-120], 98)
+    pg.draw.circle(screen, (255, 255, 255), [js.axis[0]/255*100+120, js.axis[1]/255*100+scrnDM[1]-120], 15)
+    pg.draw.circle(screen, (10, 10, 255), [scrnDM[0]-120, scrnDM[1]-120], 100)
+    pg.draw.circle(screen, (0, 0, 0), [scrnDM[0]-120, scrnDM[1]-120], 98)
+    pg.draw.circle(screen, (255, 255, 255), [js.axis[2]/255*100+scrnDM[0]-120, js.axis[5]/255*100+scrnDM[1]-120], 15)
+    pg.draw.rect(screen, (10, 10, 255), [120, 280, 10, 255])
+    pg.draw.rect(screen, (10, 10, 255), [scrnDM[0]-120, 280, 10, 255])
+    pg.draw.circle(screen, (255, 255, 255), [125, 280+(js.getAxis(3)+255)/2], 15)
+    pg.draw.circle(screen, (255, 255, 255), [scrnDM[0]-115, 280+(js.getAxis(4)+255)/2], 15)
 
-    text = fnt.render(f'Enabled: {js.state}', False, (255, 255, 255))
-    screen.blit(text, [scrnDM[0]/2-100, 20])
+    text = fnt.render(f'Enabled: {js.state}', False, (0 if js.state else 255, 255 if js.state else 0, 0))
+    screen.blit(text, [20, 20])
+    text = fnt.render(f'Amps: {amps:.1f}', False, (255, 255, 255))
+    screen.blit(text, [20, 60])
 
 
     val = max(min(-js.getAxis(yjoy)+js.getAxis(xjoy), 255), -255)
@@ -155,8 +157,10 @@ try:
     # Make sure message is valid
     if len(msg) != 6:
       msg = [0, 0, 0, 0, 0, 0]
-    print(msg)
+    # print(msg)
     s.write(msg)
+    # while s.in_waiting:
+    #   print(s.readline())
     pg.display.flip()
     clock.tick(60)
 except:
