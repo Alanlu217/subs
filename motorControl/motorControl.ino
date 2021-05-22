@@ -10,9 +10,14 @@
 #define inA3 7
 #define inB3 8
 
+// #define comDir 12
+
 // PWM pins : 3, 5, 6, 9, 10, 11?
 int pwmFrequency = 20000;
 const int MAX_BYTES = 6;
+// int time = 0;
+// int lastTime = 0;
+// int count = 0;
 
 // Variables to hold data from serial
 uint8_t data[MAX_BYTES];
@@ -30,6 +35,9 @@ void setup() {
   pinMode(inA3, OUTPUT);
   pinMode(inB3, OUTPUT);
 
+  // // For bi-directional RS-485
+  // pinMode(comDir, OUTPUT);
+
   // Set PWM pins to output and to the right frequency
   pinMode(pwmPin1, OUTPUT);
   pinMode(pwmPin2, OUTPUT);
@@ -41,6 +49,16 @@ void setup() {
 
 void loop() {
   int ret = Serial.readBytes(data, MAX_BYTES);
+  // time += millis() - lastTime;
+  // lastTime = millis();
+  // if (time > 1000){
+  //   digitalWrite(comDir, HIGH);
+  //   delay(10);
+  //   Serial.write(count);
+  //   count++;
+  //   digitalWrite(comDir, LOW);
+  //   time = 0;
+  // }
   while (Serial.available() > 0) {
     Serial.read();
   }
