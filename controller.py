@@ -84,6 +84,7 @@ js = joystick()
 # Declare variables
 stop = False
 msg = [1, 0, 1, 0, 1, 0]
+lastMsg = [0, 0, 0, 0, 0, 0]
 
 xjoy = 0
 yjoy = 1
@@ -157,8 +158,11 @@ try:
     # Make sure message is valid
     if len(msg) != 6:
       msg = [0, 0, 0, 0, 0, 0]
-    # print(msg)
-    s.write(msg)
+    print(msg, lastMsg)
+    if msg != lastMsg:
+      s.write(msg)
+      print("hi")
+    lastMsg = msg[:]
     # while s.in_waiting:
     #   print(s.readline())
     pg.display.flip()
