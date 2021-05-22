@@ -91,6 +91,8 @@ stateKey = 12
 LTrig = 3
 RTrig = 4
 power = 1
+maxAmps = 9; maxTotal = (0.1 * maxAmps + 0.2945)*256
+amps = 0
 
 # Main loop
 try:
@@ -133,19 +135,22 @@ try:
     elif val == 0: msg[2] = 0
     msg[3] = abs(val)
 
-    val = int(((js.getAxis(LTrig) - js.getAxis(RTrig))/2)*power)
+    val = int(((js.getAxis(LTrig) - js.getAxis(RTrig))/2))
     if val > 1: msg[4] = 2
     elif val < -1: msg[4] = 1
     elif val == 0: msg[4] = 0
     msg[5] = abs(val)
 
     total = msg[1] + msg[3] + msg[5]
-    while total > 282:
-      diff = round((total - 280)/3)
-      msg[1] -= diff; msg[1] = max(msg[1], 0)
-      msg[3] -= diff; msg[3] = max(msg[3], 0)
-      msg[5] -= diff; msg[5] = max(msg[5], 0)
-      total = msg[1] + msg[3] + msg[5]
+    if total > maxTotal:
+      power = total/maxTotal
+      for i in range(1, 6, 2):
+        msg[i] /= power
+        msg[i] = int(msg[i])
+    
+    totalPercentage = msg[1]/256 + msg[3]/256 + msg[5]/256
+    amps = 10 * totalPercentage - 2.9
+    amps = 0 if amps < 0 else amps
       
     # Make sure message is valid
     if len(msg) != 6:
