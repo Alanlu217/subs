@@ -4,6 +4,7 @@ import time
 from sys import argv, exit
 from pygame.locals import *
 import traceback
+from struct import unpack
 
 def sign(val):
   if val == 0:
@@ -15,7 +16,7 @@ def map(x, in_min, in_max, out_min, out_max):
 
 # Open serial port
 try:
-  s = serial.Serial(argv[1], 115200)
+  ser = serial.Serial(argv[1], 115200, timeout=0.5)
 except:
   print("Please provide the serial port and baudrate")
   print("If provided, please make sure the correct serial port has been selected")
@@ -83,8 +84,10 @@ js = joystick()
 
 # Declare variables
 stop = False
-msg = [1, 0, 1, 0, 1, 0]
-lastMsg = [0, 0, 0, 0, 0, 0]
+# 170 is 0xAA 85 is 0x55
+defualtMsg = [0xAA, 0x55, 0, 0, 0, 0]
+msg = defualtMsg
+lastMsg = defualtMsg
 
 xjoy = 0
 yjoy = 1
@@ -94,6 +97,7 @@ RTrig = 4
 power = 1
 maxAmps = 9; maxTotal = (0.1 * maxAmps + 0.2945)*256
 amps = 0
+resp = (0,)
 
 # Main loop
 try:
@@ -124,49 +128,68 @@ try:
     screen.blit(text, [20, 20])
     text = fnt.render(f'Amps: {amps:.1f}', False, (255, 255, 255))
     screen.blit(text, [20, 60])
+    text = fnt.render(f'Resp: {resp}', False, (255, 255, 255))
+    screen.blit(text, [20, 100])
 
+    msg = defualtMsg[:]
 
-    val = max(min(-js.getAxis(yjoy)+js.getAxis(xjoy), 255), -255)
-    if val > 1: msg[0] = 2
-    elif val < -1: msg[0] = 1
-    elif val == 0: msg[0] = 0
-    msg[1] = abs(val)
-
-    val = max(min(-js.getAxis(yjoy)-js.getAxis(xjoy), 255), -255)
-    if val > 1: msg[2] = 2
-    elif val < -1: msg[2] = 1
-    elif val == 0: msg[2] = 0
-    msg[3] = abs(val)
+    pressed = js.btnP[13] == 1
+    if pressed:
+      msg[2] |= 1
+    else:
+      msg[2] |= 0
+    msg[2] <<= 2
 
     val = int(((js.getAxis(LTrig) - js.getAxis(RTrig))/2))
-    if val > 1: msg[4] = 2
-    elif val < -1: msg[4] = 1
-    elif val == 0: msg[4] = 0
+    if val > 1: msg[2] |= 2
+    elif val < -1: msg[2] |= 1
+    elif val == 0: msg[2] |= 0
+    msg[2] <<= 2
     msg[5] = abs(val)
 
-    total = msg[1] + msg[3] + msg[5]
+    val = max(min(-js.getAxis(yjoy)-js.getAxis(xjoy), 255), -255)
+    if val > 1: msg[2] |= 2
+    elif val < -1: msg[2] |= 1
+    elif val == 0: msg[2] |= 0
+    msg[2] <<= 2
+    msg[4] = abs(val)
+
+    val = max(min(-js.getAxis(yjoy)+js.getAxis(xjoy), 255), -255)
+    if val > 1: msg[2] |= 2
+    elif val < -1: msg[2] |= 1
+    elif val == 0: msg[2] |= 0
+    msg[3] = abs(val)
+
+    total = msg[3] + msg[4] + msg[5]
     if total > maxTotal:
       power = total/maxTotal
-      for i in range(1, 6, 2):
+      for i in range(3, 6):
         msg[i] /= power
         msg[i] = int(msg[i])
     
-    totalPercentage = msg[1]/256 + msg[3]/256 + msg[5]/256
+    totalPercentage = msg[3]/256 + msg[4]/256 + msg[5]/256
     amps = 10 * totalPercentage - 2.9
     amps = 0 if amps < 0 else amps
       
     # Make sure message is valid
-    if len(msg) != 6:
-      msg = [0, 0, 0, 0, 0, 0]
-    print(msg, lastMsg)
+    if len(msg) != len(defualtMsg):
+      msg = defualtMsg
     if msg != lastMsg:
-      s.write(msg)
-      print("hi")
+      print(msg, lastMsg)
+      ser.write(msg)
+      time.sleep(0.005)
+      if pressed:
+        ret = ser.read()
+        if ret == b'':
+          print("timeout")
+        else:
+          resp = unpack("1B", ret)
+          print(resp)
+          while ser.in_waiting:
+            ser.read()
     lastMsg = msg[:]
-    # while s.in_waiting:
-    #   print(s.readline())
     pg.display.flip()
     clock.tick(60)
 except:
-  s.write([0, 0, 0, 0, 0, 0])
+  ser.write(defualtMsg)
   traceback.print_exc()
