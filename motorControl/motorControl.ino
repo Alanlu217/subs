@@ -10,21 +10,33 @@
 #define inA3 7
 #define inB3 8
 
-// #define comDir 12
+#define comDir 12
 
 // PWM pins : 3, 5, 6, 9, 10, 11?
 int pwmFrequency = 20000;
-const int MAX_BYTES = 6;
+const int MAX_BYTES = 10;
+const int MSG_LEN = 6;
 // int time = 0;
 // int lastTime = 0;
-// int count = 0;
+uint8_t count = 0;
 
 // Variables to hold data from serial
-uint8_t data[MAX_BYTES];
+typedef struct data_t_{
+  uint8_t req;
+  uint8_t m1s;
+  uint8_t m2s;
+  uint8_t m3s;
+  uint8_t m1;
+  uint8_t m2;
+  uint8_t m3;
+} data_t;
+uint8_t rawData[MAX_BYTES];
+data_t data; 
 
 void setup() {
   InitTimersSafe();
   Serial.begin(115200);
+  Serial.setTimeout(10);
   pinMode(LED_BUILTIN, OUTPUT);
   digitalWrite(LED_BUILTIN, LOW);
 
@@ -36,7 +48,7 @@ void setup() {
   pinMode(inB3, OUTPUT);
 
   // // For bi-directional RS-485
-  // pinMode(comDir, OUTPUT);
+  pinMode(comDir, OUTPUT);
 
   // Set PWM pins to output and to the right frequency
   pinMode(pwmPin1, OUTPUT);
@@ -45,41 +57,71 @@ void setup() {
   SetPinFrequencySafe(pwmPin1, pwmFrequency);
   SetPinFrequencySafe(pwmPin2, pwmFrequency);
   SetPinFrequencySafe(pwmPin3, pwmFrequency);
-}
 
-void loop() {
-  int ret = Serial.readBytes(data, MAX_BYTES);
-  // time += millis() - lastTime;
-  // lastTime = millis();
-  // if (time > 1000){
-  //   digitalWrite(comDir, HIGH);
-  //   delay(10);
-  //   Serial.write(count);
-  //   count++;
-  //   digitalWrite(comDir, LOW);
-  //   time = 0;
-  // }
   while (Serial.available() > 0) {
     Serial.read();
   }
-  if (ret == MAX_BYTES) {
-    pwmWrite(pwmPin1, data[1]);
-    switch (data[0]) {
-    case 1: digitalWrite(inA1, LOW); digitalWrite(inB1, HIGH); break;
-    case 0: digitalWrite(inA1, LOW); digitalWrite(inB1, LOW); break;
-    case 2: digitalWrite(inA1, HIGH); digitalWrite(inB1, LOW); break;
-    }
-    pwmWrite(pwmPin2, data[3]);
-    switch (data[2]) {
-    case 1: digitalWrite(inA2, LOW); digitalWrite(inB2, HIGH); break;
-    case 0: digitalWrite(inA2, LOW); digitalWrite(inB2, LOW); break;
-    case 2: digitalWrite(inA2, HIGH); digitalWrite(inB2, LOW); break;
-    }
-    pwmWrite(pwmPin3, data[5]);
-    switch (data[4]) {
-    case 1: digitalWrite(inA3, LOW); digitalWrite(inB3, HIGH); break;
-    case 0: digitalWrite(inA3, LOW); digitalWrite(inB3, LOW); break;
-    case 2: digitalWrite(inA3, HIGH); digitalWrite(inB3, LOW); break;
+}
+
+bool searchMsg(int msgLen) {
+  uint8_t ctrl = 0;
+  bool found = false;
+  for (int i = 0; i <= msgLen-MSG_LEN; i++) {
+    if (rawData[i] == 0xAA && rawData[i+1] == 0x55) {
+      ctrl = rawData[i+2];
+      data.m1 = rawData[i+3];
+      data.m2 = rawData[i+4];
+      data.m3 = rawData[i+5];
+      found = true;
+      break;
     }
   }
+
+  if (found) {
+    data.m1s = ctrl & 0x3;
+    ctrl = ctrl >> 0x2;
+    data.m2s = ctrl & 0x3;
+    ctrl = ctrl >> 0x2;
+    data.m3s = ctrl & 0x3;
+    ctrl = ctrl >> 0x2;
+    data.req = ctrl & 0x3;
+  }
+  return found;
+}
+
+void loop() {
+  for (int i = 0; i < MAX_BYTES; i++) {
+    rawData[i] = 0;
+  }
+  int ret = Serial.readBytes(rawData, MAX_BYTES);
+  while (Serial.available() > 0) {
+    Serial.read();
+  }
+  if (searchMsg(ret)) {
+    if (data.req == 1) {
+      digitalWrite(comDir, HIGH);
+      Serial.write(count++);
+      delay(1);
+      digitalWrite(comDir, LOW);
+    }
+    pwmWrite(pwmPin1, data.m1);
+    switch (data.m1s) {
+      case 1: digitalWrite(inA1, LOW); digitalWrite(inB1, HIGH); break;
+      case 2: digitalWrite(inA1, HIGH); digitalWrite(inB1, LOW); break;
+      default: digitalWrite(inA1, LOW); digitalWrite(inB1, LOW); break;
+    }
+    pwmWrite(pwmPin2, data.m2);
+    switch (data.m2s) {
+      case 1: digitalWrite(inA2, LOW); digitalWrite(inB2, HIGH); break;
+      case 2: digitalWrite(inA2, HIGH); digitalWrite(inB2, LOW); break;
+      default: digitalWrite(inA2, LOW); digitalWrite(inB2, LOW); break;
+    }
+    pwmWrite(pwmPin3, data.m3);
+    switch (data.m3s) {
+      case 1: digitalWrite(inA3, LOW); digitalWrite(inB3, HIGH); break;
+      case 2: digitalWrite(inA3, HIGH); digitalWrite(inB3, LOW); break;
+      default: digitalWrite(inA3, LOW); digitalWrite(inB3, LOW); break;
+    }
+  }
+  delay(10);
 }
