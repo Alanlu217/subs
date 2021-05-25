@@ -68,6 +68,31 @@ class joystick():
   def getBtn(self, i):
     return self.btn[i]
 
+def updateGUI():
+  # Draw Joystick containers
+  # Left Joystick
+  pg.draw.circle(screen, (10, 10, 255), [120, scrnDM[1]-120], 100)
+  pg.draw.circle(screen, (0, 0, 0), [120, scrnDM[1]-120], 98)
+  pg.draw.circle(screen, (255, 255, 255), [js.axis[0]/255*100+120, js.axis[1]/255*100+scrnDM[1]-120], 15)
+
+  # Right Joystick
+  pg.draw.circle(screen, (10, 10, 255), [scrnDM[0]-120, scrnDM[1]-120], 100)
+  pg.draw.circle(screen, (0, 0, 0), [scrnDM[0]-120, scrnDM[1]-120], 98)
+  pg.draw.circle(screen, (255, 255, 255), [js.axis[2]/255*100+scrnDM[0]-120, js.axis[5]/255*100+scrnDM[1]-120], 15)
+
+  # Left and Right Trigger
+  pg.draw.rect(screen, (10, 10, 255), [120, 280, 10, 255])
+  pg.draw.rect(screen, (10, 10, 255), [scrnDM[0]-120, 280, 10, 255])
+  pg.draw.circle(screen, (255, 255, 255), [125, 280+(js.getAxis(3)+255)/2], 15)
+  pg.draw.circle(screen, (255, 255, 255), [scrnDM[0]-115, 280+(js.getAxis(4)+255)/2], 15)
+
+  # Display information
+  text = fnt.render(f'Enabled: {js.state}', False, (0 if js.state else 255, 255 if js.state else 0, 0))
+  screen.blit(text, [20, 20])
+  text = fnt.render(f'Amps: {amps:.1f}', False, (255, 255, 255))
+  screen.blit(text, [20, 60])
+  text = fnt.render(f'Resp: {resp}', False, (255, 255, 255))
+  screen.blit(text, [20, 100])
 
 # Init pygame features
 pg.init()
@@ -85,7 +110,7 @@ js = joystick()
 # Declare variables
 stop = False
 # 170 is 0xAA 85 is 0x55
-defualtMsg = [0xAA, 0x55, 0, 0, 0, 0]
+defualtMsg = [0xAF, 0x55, 0, 0, 0, 0]
 msg = defualtMsg
 lastMsg = defualtMsg
 
@@ -111,28 +136,15 @@ try:
 
     # Start on Graphics
     screen.fill((0, 0, 0))
+    updateGUI()
 
-    # Draw Joystick containers
-    pg.draw.circle(screen, (10, 10, 255), [120, scrnDM[1]-120], 100)
-    pg.draw.circle(screen, (0, 0, 0), [120, scrnDM[1]-120], 98)
-    pg.draw.circle(screen, (255, 255, 255), [js.axis[0]/255*100+120, js.axis[1]/255*100+scrnDM[1]-120], 15)
-    pg.draw.circle(screen, (10, 10, 255), [scrnDM[0]-120, scrnDM[1]-120], 100)
-    pg.draw.circle(screen, (0, 0, 0), [scrnDM[0]-120, scrnDM[1]-120], 98)
-    pg.draw.circle(screen, (255, 255, 255), [js.axis[2]/255*100+scrnDM[0]-120, js.axis[5]/255*100+scrnDM[1]-120], 15)
-    pg.draw.rect(screen, (10, 10, 255), [120, 280, 10, 255])
-    pg.draw.rect(screen, (10, 10, 255), [scrnDM[0]-120, 280, 10, 255])
-    pg.draw.circle(screen, (255, 255, 255), [125, 280+(js.getAxis(3)+255)/2], 15)
-    pg.draw.circle(screen, (255, 255, 255), [scrnDM[0]-115, 280+(js.getAxis(4)+255)/2], 15)
-
-    text = fnt.render(f'Enabled: {js.state}', False, (0 if js.state else 255, 255 if js.state else 0, 0))
-    screen.blit(text, [20, 20])
-    text = fnt.render(f'Amps: {amps:.1f}', False, (255, 255, 255))
-    screen.blit(text, [20, 60])
-    text = fnt.render(f'Resp: {resp}', False, (255, 255, 255))
-    screen.blit(text, [20, 100])
-
+    # reset message 
     msg = defualtMsg[:]
+    
+    msg[2] |= 1 if js.state else 0
+    msg[2] <<= 1
 
+    # If button pressed, request for data from Arduino
     pressed = js.btnP[13] == 1
     if pressed:
       msg[2] |= 1
@@ -140,6 +152,7 @@ try:
       msg[2] |= 0
     msg[2] <<= 2
 
+    # Calculate motor 3 values
     val = int(((js.getAxis(LTrig) - js.getAxis(RTrig))/2))
     if val > 1: msg[2] |= 2
     elif val < -1: msg[2] |= 1
@@ -147,6 +160,7 @@ try:
     msg[2] <<= 2
     msg[5] = abs(val)
 
+    # Calculate motor 2 values
     val = max(min(-js.getAxis(yjoy)-js.getAxis(xjoy), 255), -255)
     if val > 1: msg[2] |= 2
     elif val < -1: msg[2] |= 1
@@ -154,12 +168,14 @@ try:
     msg[2] <<= 2
     msg[4] = abs(val)
 
+    # Calculate motor 1 values
     val = max(min(-js.getAxis(yjoy)+js.getAxis(xjoy), 255), -255)
     if val > 1: msg[2] |= 2
     elif val < -1: msg[2] |= 1
     elif val == 0: msg[2] |= 0
     msg[3] = abs(val)
 
+    # Scale down values to fit under a set amount of amps
     total = msg[3] + msg[4] + msg[5]
     if total > maxTotal:
       power = total/maxTotal
@@ -167,6 +183,7 @@ try:
         msg[i] /= power
         msg[i] = int(msg[i])
     
+    # Calculate the amps used
     totalPercentage = msg[3]/256 + msg[4]/256 + msg[5]/256
     amps = 10 * totalPercentage - 2.9
     amps = 0 if amps < 0 else amps
@@ -174,8 +191,10 @@ try:
     # Make sure message is valid
     if len(msg) != len(defualtMsg):
       msg = defualtMsg
+
+    # Only send message if changed
     if msg != lastMsg:
-      print(msg, lastMsg)
+      # print(msg, lastMsg)
       ser.write(msg)
       time.sleep(0.005)
       if pressed:
@@ -187,9 +206,14 @@ try:
           print(resp)
           while ser.in_waiting:
             ser.read()
+
+    # Update lastMsg
     lastMsg = msg[:]
     pg.display.flip()
     clock.tick(60)
 except:
+  pass
+finally:
+  # On exit, tell arduino to turn all motors off
   ser.write(defualtMsg)
   traceback.print_exc()
