@@ -55,7 +55,7 @@ class joystick():
     if self.btnP[stateKey] == 1:
       if self.state == True: self.state = False
       elif self.state == False: self.state = True
-    
+
     if self.state == False:
       self.axis=[0, 0, 0, 0, 0, 0]
       self.btn=[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
@@ -71,28 +71,37 @@ class joystick():
 def updateGUI():
   # Draw Joystick containers
   # Left Joystick
-  pg.draw.circle(screen, (10, 10, 255), [120, scrnDM[1]-120], 100)
+  pg.draw.circle(screen, BLUE, [120, scrnDM[1]-120], 100)
   pg.draw.circle(screen, (0, 0, 0), [120, scrnDM[1]-120], 98)
-  pg.draw.circle(screen, (255, 255, 255), [js.axis[0]/255*100+120, js.axis[1]/255*100+scrnDM[1]-120], 15)
+  pg.draw.circle(screen, RED if js.btn[10] else WHITE, [js.axis[0]/255*100+120, js.axis[1]/255*100+scrnDM[1]-120], 15)
 
   # Right Joystick
-  pg.draw.circle(screen, (10, 10, 255), [scrnDM[0]-120, scrnDM[1]-120], 100)
+  pg.draw.circle(screen, BLUE, [scrnDM[0]-120, scrnDM[1]-120], 100)
   pg.draw.circle(screen, (0, 0, 0), [scrnDM[0]-120, scrnDM[1]-120], 98)
-  pg.draw.circle(screen, (255, 255, 255), [js.axis[2]/255*100+scrnDM[0]-120, js.axis[5]/255*100+scrnDM[1]-120], 15)
+  pg.draw.circle(screen, RED if js.btn[11] else WHITE, [js.axis[2]/255*100+scrnDM[0]-120, js.axis[5]/255*100+scrnDM[1]-120], 15)
 
-  # Left and Right Trigger
-  pg.draw.rect(screen, (10, 10, 255), [120, 280, 10, 255])
-  pg.draw.rect(screen, (10, 10, 255), [scrnDM[0]-120, 280, 10, 255])
-  pg.draw.circle(screen, (255, 255, 255), [125, 280+(js.getAxis(3)+255)/2], 15)
-  pg.draw.circle(screen, (255, 255, 255), [scrnDM[0]-115, 280+(js.getAxis(4)+255)/2], 15)
+  # Left Trigger
+  pg.draw.rect(screen, BLUE, [120, 280, 10, 255])
+  pg.draw.circle(screen, WHITE, [125, 280+(js.getAxis(3)+255)/2], 15)
+  # Right Trigger
+  pg.draw.rect(screen, BLUE, [scrnDM[0]-120, 280, 10, 255])
+  pg.draw.circle(screen, WHITE, [scrnDM[0]-115, 280+(js.getAxis(4)+255)/2], 15)
 
   # Display information
   text = fnt.render(f'Enabled: {js.state}', False, (0 if js.state else 255, 255 if js.state else 0, 0))
   screen.blit(text, [20, 20])
-  text = fnt.render(f'Amps: {amps:.1f}', False, (255, 255, 255))
+  text = fnt.render(f'Amps: {amps:.2f}', False, WHITE)
   screen.blit(text, [20, 60])
-  text = fnt.render(f'Resp: {resp}', False, (255, 255, 255))
+  text = fnt.render(f'Resp: {resp}', False, WHITE)
   screen.blit(text, [20, 100])
+
+def getState(val, msg):
+  res = 0
+  msg <<= 2
+  if val > 1: msg |= 2
+  elif val < -1: msg |= 1
+  elif val == 0: msg |= 0
+  return msg
 
 # Init pygame features
 pg.init()
@@ -104,8 +113,13 @@ clock = pg.time.Clock()
 scrnDM = (600, 800)
 screen = pg.display.set_mode(scrnDM)
 fnt = pg.font.SysFont('Arial', 28)
-
 js = joystick()
+
+# Colors
+WHITE = (255, 255, 255)
+BLUE = (10, 10, 255)
+RED = (255, 10, 10)
+GREEN = (10, 255, 10)
 
 # Declare variables
 stop = False
@@ -124,6 +138,12 @@ maxAmps = 9; maxTotal = (0.1 * maxAmps + 0.2945)*256
 amps = 0
 resp = (0,)
 
+# Msg numbers
+ctrl = 2
+MOTOR1 = 3
+MOTOR2 = 4
+MOTOR3 = 5
+
 # Main loop
 try:
   while stop != True:
@@ -138,56 +158,47 @@ try:
     screen.fill((0, 0, 0))
     updateGUI()
 
-    # reset message 
+    # reset message
     msg = defualtMsg[:]
-    
-    msg[2] |= 1 if js.state else 0
-    msg[2] <<= 1
+
+    msg[ctrl] |= 1 if js.state else 0
+    msg[ctrl] <<= 1
 
     # If button pressed, request for data from Arduino
     pressed = js.btnP[13] == 1
     if pressed:
-      msg[2] |= 1
+      msg[ctrl] |= 1
     else:
-      msg[2] |= 0
-    msg[2] <<= 2
+      msg[ctrl] |= 0
 
     # Calculate motor 3 values
     val = int(((js.getAxis(LTrig) - js.getAxis(RTrig))/2))
-    if val > 1: msg[2] |= 2
-    elif val < -1: msg[2] |= 1
-    elif val == 0: msg[2] |= 0
-    msg[2] <<= 2
-    msg[5] = abs(val)
+    msg[ctrl] = getState(val, msg[ctrl])
+    msg[MOTOR3] = abs(val)
 
     # Calculate motor 2 values
     val = max(min(-js.getAxis(yjoy)-js.getAxis(xjoy), 255), -255)
-    if val > 1: msg[2] |= 2
-    elif val < -1: msg[2] |= 1
-    elif val == 0: msg[2] |= 0
-    msg[2] <<= 2
-    msg[4] = abs(val)
+    msg[ctrl] = getState(val, msg[ctrl])
+    msg[MOTOR2] = abs(val)
 
     # Calculate motor 1 values
     val = max(min(-js.getAxis(yjoy)+js.getAxis(xjoy), 255), -255)
-    if val > 1: msg[2] |= 2
-    elif val < -1: msg[2] |= 1
-    elif val == 0: msg[2] |= 0
-    msg[3] = abs(val)
+    msg[ctrl] = getState(val, msg[ctrl])
+    msg[MOTOR1] = abs(val)
 
     # Scale down values to fit under a set amount of amps
-    total = msg[3] + msg[4] + msg[5]
+    total = msg[MOTOR1] + msg[MOTOR2] + msg[MOTOR3]
     if total > maxTotal:
       power = total/maxTotal
       for i in range(3, 6):
         msg[i] /= power
         msg[i] = int(msg[i])
-    
+
     # Calculate the amps used
-    totalPercentage = msg[3]/256 + msg[4]/256 + msg[5]/256
+    totalPercentage = msg[MOTOR1]/256 + msg[MOTOR2]/256 + msg[MOTOR3]/256
     amps = 10 * totalPercentage - 2.9
     amps = 0 if amps < 0 else amps
-      
+
     # Make sure message is valid
     if len(msg) != len(defualtMsg):
       msg = defualtMsg
