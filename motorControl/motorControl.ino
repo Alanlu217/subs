@@ -16,8 +16,9 @@
 int pwmFrequency = 20000;
 const int MAX_BYTES = 10;
 const int MSG_LEN = 6;
-// int time = 0;
-// int lastTime = 0;
+int time = 0;
+int lastTime = 0;
+bool flashing = false;
 uint8_t count = 0;
 
 // Variables to hold data from serial
@@ -29,6 +30,7 @@ typedef struct data_t_{
   uint8_t m1;
   uint8_t m2;
   uint8_t m3;
+  uint8_t state;
 } data_t;
 uint8_t rawData[MAX_BYTES];
 data_t data; 
@@ -67,7 +69,7 @@ bool searchMsg(int msgLen) {
   uint8_t ctrl = 0;
   bool found = false;
   for (int i = 0; i <= msgLen-MSG_LEN; i++) {
-    if (rawData[i] == 0xAA && rawData[i+1] == 0x55) {
+    if (rawData[i] == 0xAF && rawData[i+1] == 0x55) {
       ctrl = rawData[i+2];
       data.m1 = rawData[i+3];
       data.m2 = rawData[i+4];
@@ -84,12 +86,19 @@ bool searchMsg(int msgLen) {
     ctrl = ctrl >> 0x2;
     data.m3s = ctrl & 0x3;
     ctrl = ctrl >> 0x2;
-    data.req = ctrl & 0x3;
+    data.req = ctrl & 0x1;
+    ctrl = ctrl >> 0x1;
+    data.state = ctrl;
   }
   return found;
 }
 
 void loop() {
+  time += millis() - lastTime;
+  lastTime = millis();
+  if (time > 600 && flashing) {flashing = false; time = 0;}
+  if (time > 600 && !flashing) {flashing = true; time = 0;}
+
   for (int i = 0; i < MAX_BYTES; i++) {
     rawData[i] = 0;
   }
@@ -122,6 +131,11 @@ void loop() {
       case 2: digitalWrite(inA3, HIGH); digitalWrite(inB3, LOW); break;
       default: digitalWrite(inA3, LOW); digitalWrite(inB3, LOW); break;
     }
+  }
+  if (data.state && flashing) {
+    digitalWrite(LED_BUILTIN, HIGH);
+  } else {
+    digitalWrite(LED_BUILTIN, LOW);
   }
   delay(10);
 }
