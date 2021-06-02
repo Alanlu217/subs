@@ -1,16 +1,17 @@
 #include <PWM.h>
 
-#define pwmPin1 9
-#define inA1 11
-#define inB1 4
-#define pwmPin2 10
+#define pwmPin1 3 // Left
+#define inA1 7
+#define inB1 8
+#define pwmPin2 10 // Right
 #define inA2 5
 #define inB2 6
-#define pwmPin3 3
-#define inA3 7
-#define inB3 8
+#define pwmPin3 9 // UpDown
+#define inA3 11
+#define inB3 4
 
 #define comDir 12
+#define indSwitch 2
 
 // PWM pins : 3, 5, 6, 9, 10, 11?
 int pwmFrequency = 20000;
@@ -39,8 +40,8 @@ void setup() {
   InitTimersSafe();
   Serial.begin(115200);
   Serial.setTimeout(10);
-  pinMode(LED_BUILTIN, OUTPUT);
-  digitalWrite(LED_BUILTIN, LOW);
+  pinMode(indSwitch, OUTPUT);
+  digitalWrite(indSwitch, LOW);
 
   pinMode(inA1, OUTPUT);
   pinMode(inB1, OUTPUT);
@@ -98,6 +99,7 @@ void loop() {
   lastTime = millis();
   if (time > 600 && flashing) {flashing = false; time = 0;}
   if (time > 600 && !flashing) {flashing = true; time = 0;}
+  if (data.state == false) {time=0;}
 
   for (int i = 0; i < MAX_BYTES; i++) {
     rawData[i] = 0;
@@ -133,9 +135,9 @@ void loop() {
     }
   }
   if (data.state && flashing) {
-    digitalWrite(LED_BUILTIN, HIGH);
+    digitalWrite(indSwitch, HIGH);
   } else {
-    digitalWrite(LED_BUILTIN, LOW);
+    digitalWrite(indSwitch, LOW);
   }
   delay(10);
 }
