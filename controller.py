@@ -82,10 +82,10 @@ def updateGUI():
 
   # Left Trigger
   pg.draw.rect(screen, BLUE, [120, 280, 10, 255])
-  pg.draw.circle(screen, WHITE, [125, 280+(js.getAxis(3)+255)/2], 15)
+  pg.draw.circle(screen, RED if js.btn[4] else WHITE, [125, 280+(js.getAxis(3)+255)/2], 15)
   # Right Trigger
   pg.draw.rect(screen, BLUE, [scrnDM[0]-120, 280, 10, 255])
-  pg.draw.circle(screen, WHITE, [scrnDM[0]-115, 280+(js.getAxis(4)+255)/2], 15)
+  pg.draw.circle(screen, RED if js.btn[5] else WHITE, [scrnDM[0]-115, 280+(js.getAxis(4)+255)/2], 15)
 
   # Display information
   text = fnt.render(f'Enabled: {js.state}', False, (0 if js.state else 255, 255 if js.state else 0, 0))
@@ -171,17 +171,17 @@ try:
     else:
       msg[ctrl] |= 0
 
-    # Calculate motor 3 values
+    # Calculate motor 3 values / Up Down
     val = int(((js.getAxis(LTrig) - js.getAxis(RTrig))/2))
     msg[ctrl] = getState(val, msg[ctrl])
     msg[MOTOR3] = abs(val)
 
-    # Calculate motor 2 values
+    # Calculate motor 2 values / Right
     val = max(min(-js.getAxis(yjoy)-js.getAxis(xjoy), 255), -255)
     msg[ctrl] = getState(val, msg[ctrl])
     msg[MOTOR2] = abs(val)
 
-    # Calculate motor 1 values
+    # Calculate motor 1 values / Left
     val = max(min(-js.getAxis(yjoy)+js.getAxis(xjoy), 255), -255)
     msg[ctrl] = getState(val, msg[ctrl])
     msg[MOTOR1] = abs(val)
