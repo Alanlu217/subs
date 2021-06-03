@@ -16,7 +16,7 @@ def map(x, in_min, in_max, out_min, out_max):
 
 # Open serial port
 try:
-  ser = serial.Serial(argv[1], 115200, timeout=0.5)
+  ser = serial.Serial(argv[1], 115200, timeout=0.1)
 except:
   print("Please provide the serial port and baudrate")
   print("If provided, please make sure the correct serial port has been selected")
@@ -113,6 +113,8 @@ clock = pg.time.Clock()
 scrnDM = (600, 800)
 screen = pg.display.set_mode(scrnDM)
 fnt = pg.font.SysFont('Arial', 28)
+RQST = pg.USEREVENT+1
+pg.time.set_timer(RQST, 1500)
 js = joystick()
 
 # Colors
@@ -136,7 +138,8 @@ RTrig = 4
 power = 1
 maxAmps = 9; maxTotal = (0.1 * maxAmps + 0.2945)*256
 amps = 0
-resp = (0,)
+resp = (0,0)
+request = False
 
 # Msg numbers
 ctrl = 2
@@ -151,6 +154,7 @@ try:
     js.update()
     keys = pg.key.get_pressed()
     events = pg.event.get()
+    if RQST in [event.type for event in events]: request = True
     if keys[pg.K_q] and keys[pg.K_p]: stop = True
     if pg.event.get(pg.QUIT): stop = False
 
@@ -165,8 +169,8 @@ try:
     msg[ctrl] <<= 1
 
     # If button pressed, request for data from Arduino
-    pressed = js.btnP[13] == 1
-    if pressed:
+    # pressed = js.btnP[13] == 1
+    if request:
       msg[ctrl] |= 1
     else:
       msg[ctrl] |= 0
@@ -208,12 +212,13 @@ try:
       # print(msg, lastMsg)
       ser.write(msg)
       time.sleep(0.005)
-      if pressed:
+      if request:
+        request = False
         ret = ser.read()
         if ret == b'':
           print("timeout")
         else:
-          resp = unpack("1B", ret)
+          resp = unpack("2B", ret)
           print(resp)
           while ser.in_waiting:
             ser.read()
