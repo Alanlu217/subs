@@ -154,7 +154,7 @@ try:
     js.update()
     keys = pg.key.get_pressed()
     events = pg.event.get()
-    if RQST in [event.type for event in events]: request = True
+    if RQST in [event.type for event in events] and js.state: request = True
     if keys[pg.K_q] and keys[pg.K_p]: stop = True
     if pg.event.get(pg.QUIT): stop = False
 
@@ -170,6 +170,7 @@ try:
 
     # If button pressed, request for data from Arduino
     # pressed = js.btnP[13] == 1
+    # request = js.btnP[13] == 1
     if request:
       msg[ctrl] |= 1
     else:
@@ -213,15 +214,19 @@ try:
       ser.write(msg)
       time.sleep(0.005)
       if request:
-        request = False
-        ret = ser.read()
-        if ret == b'':
-          print("timeout")
-        else:
-          resp = unpack("2B", ret)
-          print(resp)
-          while ser.in_waiting:
-            ser.read()
+        try:
+          request = False
+          ret = ser.read()
+          if ret == b'':
+            print("timeout")
+            raise serial.serialutil.SerialTimeoutException
+          else:
+            resp = unpack("1B", ret)
+            print(resp)
+            while ser.in_waiting:
+              ser.read()
+        except:
+          print("Message Error")
 
     # Update lastMsg
     lastMsg = msg[:]

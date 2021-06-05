@@ -1,9 +1,9 @@
 #include <PWM.h>
 
-#define pwmPin1 3 // Left
+#define pwmPin1 3 // Right
 #define inA1 7
 #define inB1 8
-#define pwmPin2 10 // Right
+#define pwmPin2 10 // Left
 #define inA2 5
 #define inB2 6
 #define pwmPin3 9 // UpDown
@@ -97,8 +97,8 @@ bool searchMsg(int msgLen) {
 void loop() {
   time += millis() - lastTime;
   lastTime = millis();
-  if (time > 600 && flashing) {flashing = false; time = 0;}
-  if (time > 600 && !flashing) {flashing = true; time = 0;}
+  if (time > 500 && flashing) {flashing = false; time = 0;}
+  if (time > 500 && !flashing) {flashing = true; time = 0;}
   if (data.state == false) {time=0;}
 
   for (int i = 0; i < MAX_BYTES; i++) {
