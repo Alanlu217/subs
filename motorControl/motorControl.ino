@@ -1,4 +1,6 @@
 #include <PWM.h>
+#include <OneWire.h> 
+#include <DallasTemperature.h>
 
 #define pwmPin1 3 // Right
 #define inA1 7
@@ -11,16 +13,27 @@
 #define inB3 4
 
 #define comDir 12
-#define indSwitch 2
+#define indSwitch 13
+#define lightSwitch A5
+#define ONE_WIRE_BUS 2
+
+#define voltPin A0
 
 // PWM pins : 3, 5, 6, 9, 10, 11?
 int pwmFrequency = 20000;
 const int MAX_BYTES = 10;
 const int MSG_LEN = 6;
+const int NUM_MSG = 5;
 int time = 0;
 int lastTime = 0;
 bool flashing = false;
 uint8_t count = 0;
+const float R1 = 9.96;
+const float R2 = 4.66;
+
+// For temperature sensor
+OneWire oneWire(ONE_WIRE_BUS); 
+DallasTemperature sensors(&oneWire);
 
 // Variables to hold data from serial
 typedef struct data_t_{
@@ -34,6 +47,7 @@ typedef struct data_t_{
   uint8_t state;
 } data_t;
 uint8_t rawData[MAX_BYTES];
+uint8_t msg[NUM_MSG];
 data_t data; 
 
 void setup() {
@@ -41,6 +55,8 @@ void setup() {
   Serial.begin(115200);
   Serial.setTimeout(10);
   pinMode(indSwitch, OUTPUT);
+  pinMode(lightSwitch, OUTPUT);
+  digitalWrite(lightSwitch, HIGH);
   digitalWrite(indSwitch, LOW);
 
   pinMode(inA1, OUTPUT);
@@ -53,6 +69,8 @@ void setup() {
   // // For bi-directional RS-485
   pinMode(comDir, OUTPUT);
 
+  pinMode(voltPin, INPUT);
+
   // Set PWM pins to output and to the right frequency
   pinMode(pwmPin1, OUTPUT);
   pinMode(pwmPin2, OUTPUT);
@@ -60,6 +78,10 @@ void setup() {
   SetPinFrequencySafe(pwmPin1, pwmFrequency);
   SetPinFrequencySafe(pwmPin2, pwmFrequency);
   SetPinFrequencySafe(pwmPin3, pwmFrequency);
+
+  // Setup temperature sensor on onewire
+  sensors.begin();
+  sensors.setWaitForConversion(false);
 
   while (Serial.available() > 0) {
     Serial.read();
@@ -95,11 +117,13 @@ bool searchMsg(int msgLen) {
 }
 
 void loop() {
+  sensors.requestTemperatures();
+
   time += millis() - lastTime;
   lastTime = millis();
   if (time > 500 && flashing) {flashing = false; time = 0;}
   if (time > 500 && !flashing) {flashing = true; time = 0;}
-  if (data.state == false) {time=0;}
+  if (data.state == false) {time = 0;}
 
   for (int i = 0; i < MAX_BYTES; i++) {
     rawData[i] = 0;
@@ -111,7 +135,10 @@ void loop() {
   if (searchMsg(ret)) {
     if (data.req == 1) {
       digitalWrite(comDir, HIGH);
-      Serial.write(count++);
+      float temperature = sensors.getTempCByIndex(0);
+      memcpy(&msg[0], (uint8_t*)&temperature, 4);
+      msg[4] = (uint8_t)((((float)analogRead(voltPin))/1024*5*(R1+R2)/R2+0.761)*10);
+      Serial.write(msg, NUM_MSG);
       delay(1);
       digitalWrite(comDir, LOW);
     }
