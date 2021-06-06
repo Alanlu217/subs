@@ -92,8 +92,12 @@ def updateGUI():
   screen.blit(text, [20, 20])
   text = fnt.render(f'Amps: {amps:.2f}', False, WHITE)
   screen.blit(text, [20, 60])
-  text = fnt.render(f'Resp: {resp}', False, WHITE)
+  if inpt[0] != None:
+    inpt[0] = round(inpt[0]*10)/10
+  text = fnt.render(f'Temp: {inpt[0]}', False, WHITE if inpt[0] == None or inpt[0] < 60 else RED)
   screen.blit(text, [20, 100])
+  text = fnt.render(f'Volts: {inpt[1]}', False, WHITE if inpt[1] == None or inpt[1] > 9 else RED)
+  screen.blit(text, [20, 140])
 
 def getState(val, msg):
   res = 0
@@ -138,7 +142,8 @@ RTrig = 4
 power = 1
 maxAmps = 9; maxTotal = (0.1 * maxAmps + 0.2945)*256
 amps = 0
-resp = (0,0)
+resp = [0, 0, 0, 0, 0]
+inpt = [None, None]
 request = False
 
 # Msg numbers
@@ -216,16 +221,21 @@ try:
       if request:
         try:
           request = False
-          ret = ser.read()
+          print(ser.in_waiting)
+          ret = ser.read(5)
           if ret == b'':
             print("timeout")
             raise serial.serialutil.SerialTimeoutException
           else:
-            resp = unpack("1B", ret)
+            resp = unpack("5B", ret)
             print(resp)
+            temp = bytearray(resp[:4])
+            inpt[0] = unpack('<f', temp)[0]
+            inpt[1] = resp[4]/10
             while ser.in_waiting:
               ser.read()
         except:
+          traceback.print_exc()
           print("Message Error")
 
     # Update lastMsg
