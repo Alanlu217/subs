@@ -90,13 +90,29 @@ def updateGUI():
   # Display information
   text = fnt.render(f'Enabled: {js.state}', False, (0 if js.state else 255, 255 if js.state else 0, 0))
   screen.blit(text, [20, 20])
-  text = fnt.render(f'Amps: {amps:.2f}', False, WHITE)
-  screen.blit(text, [20, 60])
+
+  # Only change text color if data exists
   if inpt[0] != None:
     inpt[0] = round(inpt[0]*10)/10
-  text = fnt.render(f'Temp: {inpt[0]}', False, WHITE if inpt[0] == None or inpt[0] < 60 else RED)
+
+    # If temperature greater than 60 degrees, make text red
+    if inpt[0] < 60: color1 = WHITE
+    else: color1 = RED
+    if js.state == False: color1 = GREY
+
+    # If volts is less than 9, make text red
+    if inpt[0] > 9: color2 = WHITE
+    else: color2 = RED
+    if js.state == False: color2 = GREY
+  else: 
+    color1 = WHITE
+    color2 = WHITE
+
+  text = fnt.render(f'Amps: {amps}', False, WHITE if amps == None or js.state else GREY)
+  screen.blit(text, [20, 60])
+  text = fnt.render(f'Temp: {inpt[0]}', False, color1)
   screen.blit(text, [20, 100])
-  text = fnt.render(f'Volts: {inpt[1]}', False, WHITE if inpt[1] == None or inpt[1] > 9 else RED)
+  text = fnt.render(f'Volts: {inpt[1]}', False, color2)
   screen.blit(text, [20, 140])
 
 def getState(val, msg):
@@ -123,6 +139,7 @@ js = joystick()
 
 # Colors
 WHITE = (255, 255, 255)
+GREY = (100, 100, 100)
 BLUE = (10, 10, 255)
 RED = (255, 10, 10)
 GREEN = (10, 255, 10)
@@ -141,7 +158,7 @@ LTrig = 3
 RTrig = 4
 power = 1
 maxAmps = 9; maxTotal = (0.1 * maxAmps + 0.2945)*256
-amps = 0
+amps = None
 resp = [0, 0, 0, 0, 0]
 inpt = [None, None]
 request = False
@@ -167,84 +184,82 @@ try:
     screen.fill((0, 0, 0))
     updateGUI()
 
-    # reset message
-    msg = defualtMsg[:]
+    if js.state:
+      # reset message
+      msg = defualtMsg[:]
 
-    msg[ctrl] |= 1 if js.state else 0
-    msg[ctrl] <<= 1
+      msg[ctrl] |= 1 if js.state else 0
+      msg[ctrl] <<= 1
 
-    # If button pressed, request for data from Arduino
-    # pressed = js.btnP[13] == 1
-    # request = js.btnP[13] == 1
-    if request:
-      msg[ctrl] |= 1
-    else:
-      msg[ctrl] |= 0
-
-    # Calculate motor 3 values / Up Down
-    val = int(((js.getAxis(LTrig) - js.getAxis(RTrig))/2))
-    msg[ctrl] = getState(val, msg[ctrl])
-    msg[MOTOR3] = abs(val)
-
-    # Calculate motor 2 values / Right
-    val = max(min(-js.getAxis(yjoy)-js.getAxis(xjoy), 255), -255)
-    msg[ctrl] = getState(val, msg[ctrl])
-    msg[MOTOR2] = abs(val)
-
-    # Calculate motor 1 values / Left
-    val = max(min(-js.getAxis(yjoy)+js.getAxis(xjoy), 255), -255)
-    msg[ctrl] = getState(val, msg[ctrl])
-    msg[MOTOR1] = abs(val)
-
-    # Scale down values to fit under a set amount of amps
-    total = msg[MOTOR1] + msg[MOTOR2] + msg[MOTOR3]
-    if total > maxTotal:
-      power = total/maxTotal
-      for i in range(3, 6):
-        msg[i] /= power
-        msg[i] = int(msg[i])
-
-    # Calculate the amps used
-    totalPercentage = msg[MOTOR1]/256 + msg[MOTOR2]/256 + msg[MOTOR3]/256
-    amps = 10 * totalPercentage - 2.9
-    amps = 0 if amps < 0 else amps
-
-    # Make sure message is valid
-    if len(msg) != len(defualtMsg):
-      msg = defualtMsg
-
-    # Only send message if changed
-    if msg != lastMsg:
-      # print(msg, lastMsg)
-      ser.write(msg)
-      time.sleep(0.005)
+      # If button pressed, request for data from Arduino
+      # pressed = js.btnP[13] == 1
+      # request = js.btnP[13] == 1
       if request:
-        try:
-          request = False
-          print(ser.in_waiting)
-          ret = ser.read(5)
-          if ret == b'':
-            print("timeout")
-            raise serial.serialutil.SerialTimeoutException
-          else:
-            resp = unpack("5B", ret)
-            print(resp)
-            temp = bytearray(resp[:4])
-            inpt[0] = unpack('<f', temp)[0]
-            inpt[1] = resp[4]/10
-            while ser.in_waiting:
-              ser.read()
-        except:
-          traceback.print_exc()
-          print("Message Error")
+        msg[ctrl] |= 1
+      else:
+        msg[ctrl] |= 0
 
-    # Update lastMsg
-    lastMsg = msg[:]
+      # Calculate motor 3 values / Up Down
+      val = int(((js.getAxis(LTrig) - js.getAxis(RTrig))/2))
+      msg[ctrl] = getState(val, msg[ctrl])
+      msg[MOTOR3] = abs(val)
+
+      # Calculate motor 2 values / Right
+      val = max(min(-js.getAxis(yjoy)-js.getAxis(xjoy), 255), -255)
+      msg[ctrl] = getState(val, msg[ctrl])
+      msg[MOTOR2] = abs(val)
+
+      # Calculate motor 1 values / Left
+      val = max(min(-js.getAxis(yjoy)+js.getAxis(xjoy), 255), -255)
+      msg[ctrl] = getState(val, msg[ctrl])
+      msg[MOTOR1] = abs(val)
+
+      # Scale down values to fit under a set amount of amps
+      total = msg[MOTOR1] + msg[MOTOR2] + msg[MOTOR3]
+      if total > maxTotal:
+        power = total/maxTotal
+        for i in range(3, 6):
+          msg[i] /= power
+          msg[i] = int(msg[i])
+
+      # Calculate the amps used
+      totalPercentage = msg[MOTOR1]/256 + msg[MOTOR2]/256 + msg[MOTOR3]/256
+      amps = 10 * totalPercentage - 2.9
+      amps = 0 if amps < 0 else amps
+      amps = round(amps*100)/100
+
+      # Make sure message is valid
+      if len(msg) != len(defualtMsg):
+        msg = defualtMsg
+
+      # Only send message if changed
+      if msg != lastMsg:
+        # print(msg, lastMsg)
+        ser.write(msg)
+        time.sleep(0.005)
+        if request:
+          try:
+            request = False
+            ret = ser.read(5)
+            if ret == b'':
+              print("timeout")
+              raise serial.serialutil.SerialTimeoutException
+            else:
+              resp = unpack("5B", ret)
+              temp = bytearray(resp[:4])
+              inpt[0] = unpack('<f', temp)[0]
+              inpt[1] = resp[4]/10
+              while ser.in_waiting:
+                ser.read()
+          except:
+            print("Message Error")
+
+      # Update lastMsg
+      lastMsg = msg[:]
     pg.display.flip()
     clock.tick(60)
 except:
-  pass
+  traceback.print_exc()
 finally:
   # On exit, tell arduino to turn all motors off
   ser.write(defualtMsg)
-  traceback.print_exc()
