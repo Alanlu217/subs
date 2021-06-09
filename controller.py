@@ -4,6 +4,7 @@ import time
 from sys import argv, exit
 from pygame.locals import *
 import cv2
+import numpy
 import traceback
 from struct import unpack
 
@@ -16,7 +17,7 @@ def map(x, in_min, in_max, out_min, out_max):
   return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min
 
 # Open serial port
-if len(argv) == 2:
+if len(argv) == 3:
   testing = False
   try:
     ser = serial.Serial(argv[1], 115200, timeout=0.1)
@@ -75,6 +76,28 @@ class joystick():
   def getBtn(self, i):
     return self.btn[i]
 
+class camera():
+  def __init__(self, camera_index, color, size):
+    self.camera = cv2.VideoCapture(camera_index)
+    self.camera.set(3, size[0])
+    self.camera.set(4, size[1])
+    self.color = color
+    self.size = size
+
+  def getCamFrame(self):
+    retval,frame = self.camera.read()
+    frame = cv2.cvtColor(frame,cv2.COLOR_BGR2RGB)
+    if not self.color:
+      frame = cv2.cvtColor(frame,cv2.COLOR_BGR2GRAY)
+      frame = cv2.cvtColor(frame,cv2.COLOR_GRAY2RGB)
+    frame = numpy.rot90(frame)
+    frame = pg.surfarray.make_surface(frame)
+    return frame
+
+  def blitCamFrame(self, screen, xy):
+    frame = pg.transform.flip(pg.transform.scale(self.getCamFrame(), (self.size[0], self.size[1])), True, False)
+    screen.blit(frame, [xy[0]-self.size[0]/2, xy[1]-self.size[1]/2])
+
 def updateGUI():
   # Draw Joystick containers
   # Left Joystick
@@ -122,6 +145,10 @@ def updateGUI():
   text = fnt.render(f'Volts: {inpt[1]}', False, color2)
   screen.blit(text, [20, 140])
 
+  pg.draw.rect(screen, BLUE, [scrnDM[0]/2-cam.size[0]/2-12, scrnDM[1]/2-cam.size[1]/2-12, cam.size[0]+24, cam.size[1]+24])
+  pg.draw.rect(screen, BLACK, [scrnDM[0]/2-cam.size[0]/2-9, scrnDM[1]/2-cam.size[1]/2-9, cam.size[0]+18, cam.size[1]+18])
+  cam.blitCamFrame(screen, (scrnDM[0]/2, scrnDM[1]/2))
+
 def getState(val, msg):
   res = 0
   msg <<= 2
@@ -129,6 +156,19 @@ def getState(val, msg):
   elif val < -1: msg |= 1
   elif val == 0: msg |= 0
   return msg
+
+def listCams():
+  index = 0
+  arr = []
+  while True:
+      cap = cv2.VideoCapture(index)
+      if not cap.read()[0]:
+          break
+      else:
+          arr.append(index)
+      cap.release()
+      index += 1
+  return arr
 
 # Init pygame features
 pg.init()
@@ -142,10 +182,14 @@ screen = pg.display.set_mode(scrnDM)
 fnt = pg.font.SysFont('Arial', 28)
 RQST = pg.USEREVENT+1
 pg.time.set_timer(RQST, 1500)
+
+# Create classes
 js = joystick()
+cam = camera(len(listCams())-1, True, (586, 442))
 
 # Colors
 WHITE = (255, 255, 255)
+BLACK = (0, 0, 0)
 GREY = (100, 100, 100)
 BLUE = (10, 10, 255)
 RED = (255, 10, 10)
@@ -269,4 +313,5 @@ except:
   traceback.print_exc()
 finally:
   # On exit, tell arduino to turn all motors off
-  ser.write(defualtMsg)
+  if not testing:
+    ser.write(defualtMsg)
