@@ -3,6 +3,7 @@ import pygame as pg
 import time
 from sys import argv, exit
 from pygame.locals import *
+import cv2
 import traceback
 from struct import unpack
 
@@ -15,18 +16,23 @@ def map(x, in_min, in_max, out_min, out_max):
   return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min
 
 # Open serial port
-try:
-  ser = serial.Serial(argv[1], 115200, timeout=0.1)
-except:
-  print("Please provide the serial port and baudrate")
-  print("If provided, please make sure the correct serial port has been selected")
-  exit()
+if len(argv) == 2:
+  testing = False
+  try:
+    ser = serial.Serial(argv[1], 115200, timeout=0.1)
+  except:
+    print("Please provide the serial port and baudrate")
+    print("If provided, please make sure the correct serial port has been selected")
+    exit()
+else:
+  testing = True
 
 class joystick():
   def __init__(self):
-    self.js = pg.joystick.Joystick(0)
-    self.js.init()
-    print(self.js.get_name())
+    if not testing:
+      self.js = pg.joystick.Joystick(0)
+      self.js.init()
+      print(self.js.get_name())
     self.axis=[0, 0, 0, 0, 0, 0]
     self.btn=[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
     self.btnP=[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
@@ -34,32 +40,33 @@ class joystick():
     self.state = False
 
   def update(self):
-    # Update axis
-    for i in range(0, self.js.get_numaxes()):
-      n = round(self.js.get_axis(i)*255)
-      if -5 < n < 5:
-        self.axis[i] = 0
-      else:
-        self.axis[i] = n
+    if not testing:
+      # Update axis
+      for i in range(0, self.js.get_numaxes()):
+        n = round(self.js.get_axis(i)*255)
+        if -5 < n < 5:
+          self.axis[i] = 0
+        else:
+          self.axis[i] = n
 
-    # Update buttons
-    for i in range(0, self.js.get_numbuttons()):
-      self.btn[i] = self.js.get_button(i)
-      if self.btn[i] == 1 and self.lastBtn[i] == 0:
-        self.btnP[i] = 1
-      else:
-        self.btnP[i] = 0
-    self.lastBtn = self.btn[:]
+      # Update buttons
+      for i in range(0, self.js.get_numbuttons()):
+        self.btn[i] = self.js.get_button(i)
+        if self.btn[i] == 1 and self.lastBtn[i] == 0:
+          self.btnP[i] = 1
+        else:
+          self.btnP[i] = 0
+      self.lastBtn = self.btn[:]
 
-    # Change state if button 6 is pressed
-    if self.btnP[stateKey] == 1:
-      if self.state == True: self.state = False
-      elif self.state == False: self.state = True
+      # Change state if button 6 is pressed
+      if self.btnP[stateKey] == 1:
+        if self.state == True: self.state = False
+        elif self.state == False: self.state = True
 
-    if self.state == False:
-      self.axis=[0, 0, 0, 0, 0, 0]
-      self.btn=[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-      self.btnP=[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+      if self.state == False:
+        self.axis=[0, 0, 0, 0, 0, 0]
+        self.btn=[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        self.btnP=[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 
 
   def getAxis(self, i):
@@ -130,7 +137,7 @@ pg.joystick.init()
 
 clock = pg.time.Clock()
 
-scrnDM = (600, 800)
+scrnDM = (1200, 800)
 screen = pg.display.set_mode(scrnDM)
 fnt = pg.font.SysFont('Arial', 28)
 RQST = pg.USEREVENT+1
@@ -233,7 +240,7 @@ try:
         msg = defualtMsg
 
       # Only send message if changed
-      if msg != lastMsg:
+      if msg != lastMsg and not testing:
         # print(msg, lastMsg)
         ser.write(msg)
         time.sleep(0.005)
