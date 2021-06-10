@@ -2,15 +2,15 @@
 #include <OneWire.h> 
 #include <DallasTemperature.h>
 
-#define pwmPin1 3 // Right
-#define inA1 7
-#define inB1 8
+#define pwmPin1 9 // Right
+#define inA1 11
+#define inB1 4
 #define pwmPin2 10 // Left
 #define inA2 5
 #define inB2 6
-#define pwmPin3 9 // UpDown
-#define inA3 11
-#define inB3 4
+#define pwmPin3 3 // UpDown
+#define inA3 7
+#define inB3 8
 
 #define comDir 12
 #define indSwitch 13
