@@ -20,7 +20,7 @@ def map(x, in_min, in_max, out_min, out_max):
 if len(argv) == 3:
   testing = False
   try:
-    ser = serial.Serial(argv[1], 115200, timeout=0.1)
+    ser = serial.Serial(argv[2], 115200, timeout=0.1)
   except:
     print("Please provide the serial port and baudrate")
     print("If provided, please make sure the correct serial port has been selected")
@@ -185,7 +185,7 @@ pg.time.set_timer(RQST, 1500)
 
 # Create classes
 js = joystick()
-cam = camera(len(listCams())-1, True, (586, 442))
+cam = camera(int(argv[1]), True, (586, 442))
 
 # Colors
 WHITE = (255, 255, 255)
