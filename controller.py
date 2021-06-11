@@ -83,9 +83,13 @@ class camera():
     self.camera.set(4, size[1])
     self.color = color
     self.size = size
+    self.lastFrame = None
 
   def getCamFrame(self):
     retval,frame = self.camera.read()
+    if retval != True:
+      frame = self.lastFrame
+    self.lastFrame = frame
     frame = cv2.cvtColor(frame,cv2.COLOR_BGR2RGB)
     if not self.color:
       frame = cv2.cvtColor(frame,cv2.COLOR_BGR2GRAY)
