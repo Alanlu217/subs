@@ -201,8 +201,8 @@ GREEN = (10, 255, 10)
 
 # Declare variables
 stop = False
-# 170 is 0xAA 85 is 0x55
-defualtMsg = [0xAF, 0x55, 0, 0, 0, 0]
+lightOn = False
+defualtMsg = [0xAF, 0x54, 0, 0, 0, 0]
 msg = defualtMsg
 lastMsg = defualtMsg
 
@@ -219,7 +219,8 @@ inpt = [None, None]
 request = False
 
 # Msg numbers
-ctrl = 2
+ctrl = 1
+ctrl2 = 2
 MOTOR1 = 3
 MOTOR2 = 4
 MOTOR3 = 5
@@ -243,30 +244,35 @@ try:
       # reset message
       msg = defualtMsg[:]
 
-      msg[ctrl] |= 1 if js.state else 0
-      msg[ctrl] <<= 1
+      # Toggle lights on button 2 press
+      if js.btnP[2]: lightOn = not lightOn
+      msg[ctrl] = 0x2A # Set byte to correct byte
+      msg[ctrl] <<= 1 # Right shift by one to allow space for lightOn bit
+      msg[ctrl] |= lightOn # Set bit on or off depending on button status
 
-      # If button pressed, request for data from Arduino
-      # pressed = js.btnP[13] == 1
-      # request = js.btnP[13] == 1
+      # Set bit on or off depending on state
+      msg[ctrl2] |= 1 if js.state else 0
+      msg[ctrl2] <<= 1
+
+      # Every 1.5 seconds, computer will request
       if request:
-        msg[ctrl] |= 1
+        msg[ctrl2] |= 1
       else:
-        msg[ctrl] |= 0
+        msg[ctrl2] |= 0
 
       # Calculate motor 3 values / Up Down
       val = int(((js.getAxis(LTrig) - js.getAxis(RTrig))/2))
-      msg[ctrl] = getState(val, msg[ctrl])
+      msg[ctrl2] = getState(val, msg[ctrl2])
       msg[MOTOR3] = abs(val)
 
       # Calculate motor 2 values / Right
       val = max(min(-js.getAxis(yjoy)-js.getAxis(xjoy), 255), -255)
-      msg[ctrl] = getState(val, msg[ctrl])
+      msg[ctrl2] = getState(val, msg[ctrl2])
       msg[MOTOR2] = abs(val)
 
       # Calculate motor 1 values / Left
       val = max(min(-js.getAxis(yjoy)+js.getAxis(xjoy), 255), -255)
-      msg[ctrl] = getState(val, msg[ctrl])
+      msg[ctrl2] = getState(val, msg[ctrl2])
       msg[MOTOR1] = abs(val)
 
       # Scale down values to fit under a set amount of amps

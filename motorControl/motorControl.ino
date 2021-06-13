@@ -7,7 +7,7 @@
 #define inB1 6
 #define pwmPin2 9 // Right
 #define inA2 11
-#define inB 4
+#define inB2 4
 #define pwmPin3 3 // UpDown
 #define inA3 7
 #define inB3 8
@@ -45,7 +45,9 @@ typedef struct data_t_{
   uint8_t m2;
   uint8_t m3;
   uint8_t state;
+  uint8_t light;
 } data_t;
+
 uint8_t rawData[MAX_BYTES];
 uint8_t msg[NUM_MSG];
 data_t data; 
@@ -90,10 +92,12 @@ void setup() {
 
 bool searchMsg(int msgLen) {
   uint8_t ctrl = 0;
+  uint8_t ctrl2 = 0;
   bool found = false;
   for (int i = 0; i <= msgLen-MSG_LEN; i++) {
-    if (rawData[i] == 0xAF && rawData[i+1] == 0x55) {
-      ctrl = rawData[i+2];
+    if (rawData[i] == 0xAF && rawData[i+1]>>1 == 0x2A) {
+      ctrl = rawData[i+1];
+      ctrl2 = rawData[i+2];
       data.m1 = rawData[i+3];
       data.m2 = rawData[i+4];
       data.m3 = rawData[i+5];
@@ -103,15 +107,16 @@ bool searchMsg(int msgLen) {
   }
 
   if (found) {
-    data.m1s = ctrl & 0x3;
-    ctrl = ctrl >> 0x2;
-    data.m2s = ctrl & 0x3;
-    ctrl = ctrl >> 0x2;
-    data.m3s = ctrl & 0x3;
-    ctrl = ctrl >> 0x2;
-    data.req = ctrl & 0x1;
-    ctrl = ctrl >> 0x1;
-    data.state = ctrl;
+    data.light = ctrl & 0x1;
+    data.m1s = ctrl2 & 0x3;
+    ctrl2 = ctrl2 >> 0x2;
+    data.m2s = ctrl2 & 0x3;
+    ctrl2 = ctrl2 >> 0x2;
+    data.m3s = ctrl2 & 0x3;
+    ctrl2 = ctrl2 >> 0x2;
+    data.req = ctrl2 & 0x1;
+    ctrl2 = ctrl2 >> 0x1;
+    data.state = ctrl2;
   }
   return found;
 }
@@ -166,5 +171,7 @@ void loop() {
   } else {
     digitalWrite(indSwitch, LOW);
   }
+  if (data.light && data.state) { digitalWrite(lightSwitch, HIGH); }
+  else { digitalWrite(lightSwitch, LOW); }
   delay(10);
 }
