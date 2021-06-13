@@ -30,18 +30,20 @@ else:
 
 class joystick():
   def __init__(self):
-    if not testing:
-      self.js = pg.joystick.Joystick(0)
-      self.js.init()
-      print(self.js.get_name())
     self.axis=[0, 0, 0, 0, 0, 0]
     self.btn=[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
     self.btnP=[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
     self.lastBtn=[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
     self.state = False
+    self.on = True
+    try:
+      self.js = pg.joystick.Joystick(0)
+      self.js.init()
+      print(self.js.get_name())
+    except: self.on = False; print("No Joystick")
 
   def update(self):
-    if not testing:
+    if self.on:
       # Update axis
       for i in range(0, self.js.get_numaxes()):
         n = round(self.js.get_axis(i)*255)
@@ -63,11 +65,6 @@ class joystick():
       if self.btnP[stateKey] == 1:
         if self.state == True: self.state = False
         elif self.state == False: self.state = True
-
-      if self.state == False:
-        self.axis=[0, 0, 0, 0, 0, 0]
-        self.btn=[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-        self.btnP=[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 
 
   def getAxis(self, i):
@@ -217,12 +214,13 @@ amps = None
 resp = [0, 0, 0, 0, 0]
 inpt = [None, None]
 request = False
+verbose = False
 
 # Msg numbers
 ctrl = 1
 ctrl2 = 2
-MOTOR1 = 3
-MOTOR2 = 4
+MOTOR1 = 4
+MOTOR2 = 3
 MOTOR3 = 5
 
 # Main loop
@@ -234,7 +232,8 @@ try:
     events = pg.event.get()
     if RQST in [event.type for event in events] and js.state: request = True
     if keys[pg.K_q] and keys[pg.K_p]: stop = True
-    if pg.event.get(pg.QUIT): stop = False
+    if js.btn[8] and js.btn[9]: stop = True
+    if pg.event.get(pg.QUIT): stop = True
 
     # Start on Graphics
     screen.fill((0, 0, 0))
@@ -261,17 +260,17 @@ try:
         msg[ctrl2] |= 0
 
       # Calculate motor 3 values / Up Down
-      val = int(((js.getAxis(LTrig) - js.getAxis(RTrig))/2))
+      val = int(((js.getAxis(RTrig) - js.getAxis(LTrig))/2))
       msg[ctrl2] = getState(val, msg[ctrl2])
       msg[MOTOR3] = abs(val)
 
       # Calculate motor 2 values / Right
-      val = max(min(-js.getAxis(yjoy)-js.getAxis(xjoy), 255), -255)
+      val = -max(min(-js.getAxis(yjoy)-js.getAxis(xjoy), 255), -255)
       msg[ctrl2] = getState(val, msg[ctrl2])
       msg[MOTOR2] = abs(val)
 
       # Calculate motor 1 values / Left
-      val = max(min(-js.getAxis(yjoy)+js.getAxis(xjoy), 255), -255)
+      val = -max(min(-js.getAxis(yjoy)+js.getAxis(xjoy), 255), -255)
       msg[ctrl2] = getState(val, msg[ctrl2])
       msg[MOTOR1] = abs(val)
 
@@ -297,29 +296,39 @@ try:
       if msg != lastMsg and not testing:
         # print(msg, lastMsg)
         ser.write(msg)
-        time.sleep(0.005)
+        time.sleep(0.005) # Allow time for data to send
         if request:
-          try:
-            request = False
-            ret = ser.read(5)
-            if ret == b'':
-              print("timeout")
+          try: # In case of message failure
+            request = False # Reset request
+            ret = ser.read(5) # Read 5 bytes from serial
+            if ret == b'': # If nothing sent back
+              print("timeout") # raise exception
               raise serial.serialutil.SerialTimeoutException
-            else:
+            else: # If message is valid
               resp = unpack("5B", ret)
               temp = bytearray(resp[:4])
               inpt[0] = unpack('<f', temp)[0]
               inpt[1] = resp[4]/10
-              while ser.in_waiting:
+              while ser.in_waiting: # Get rid of all other bytes
                 ser.read()
           except:
             print("Message Error")
 
       # Update lastMsg
       lastMsg = msg[:]
+    # If disabled, turn off all Arduino features
+    elif not testing:
+      ser.write(defualtMsg)
+
+    # If touchpad pressed, print debug info
+    if js.btnP[13]: verbose = not verbose
+    if verbose: print([hex(x) for x in msg])
+
+    # Update display
     pg.display.flip()
     clock.tick(60)
 except:
+  # Print error message if there is one
   traceback.print_exc()
 finally:
   # On exit, tell arduino to turn all motors off
