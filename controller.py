@@ -215,6 +215,9 @@ resp = [0, 0, 0, 0, 0]
 inpt = [None, None]
 request = False
 verbose = False
+mtr1 = 0
+mtr2 = 0
+mtr3 = 0
 
 # Msg numbers
 ctrl = 1
@@ -260,19 +263,19 @@ try:
         msg[ctrl2] |= 0
 
       # Calculate motor 3 values / Up Down
-      val = int(((js.getAxis(RTrig) - js.getAxis(LTrig))/2))
-      msg[ctrl2] = getState(val, msg[ctrl2])
-      msg[MOTOR3] = abs(val)
+      mtr3 = int(((js.getAxis(RTrig) - js.getAxis(LTrig))/2))
+      msg[ctrl2] = getState(mtr3, msg[ctrl2])
+      msg[MOTOR3] = abs(mtr3)
 
       # Calculate motor 2 values / Right
-      val = -max(min(-js.getAxis(yjoy)-js.getAxis(xjoy), 255), -255)
-      msg[ctrl2] = getState(val, msg[ctrl2])
-      msg[MOTOR2] = abs(val)
+      mtr2 = -max(min(-js.getAxis(yjoy)-js.getAxis(xjoy), 255), -255)
+      msg[ctrl2] = getState(mtr2, msg[ctrl2])
+      msg[MOTOR2] = abs(mtr2)
 
       # Calculate motor 1 values / Left
-      val = -max(min(-js.getAxis(yjoy)+js.getAxis(xjoy), 255), -255)
-      msg[ctrl2] = getState(val, msg[ctrl2])
-      msg[MOTOR1] = abs(val)
+      mtr1 = -max(min(-js.getAxis(yjoy)+js.getAxis(xjoy), 255), -255)
+      msg[ctrl2] = getState(mtr1, msg[ctrl2])
+      msg[MOTOR1] = abs(mtr1)
 
       # Scale down values to fit under a set amount of amps
       total = msg[MOTOR1] + msg[MOTOR2] + msg[MOTOR3]
@@ -322,7 +325,7 @@ try:
 
     # If touchpad pressed, print debug info
     if js.btnP[13]: verbose = not verbose
-    if verbose: print([hex(x) for x in msg])
+    if verbose: print([mtr1, mtr2, mtr3])
 
     # Update display
     pg.display.flip()
