@@ -83,16 +83,19 @@ class camera():
     self.lastFrame = None
 
   def getCamFrame(self):
-    retval,frame = self.camera.read()
-    if retval != True:
-      frame = self.lastFrame
-    self.lastFrame = frame
-    frame = cv2.cvtColor(frame,cv2.COLOR_BGR2RGB)
-    if not self.color:
-      frame = cv2.cvtColor(frame,cv2.COLOR_BGR2GRAY)
-      frame = cv2.cvtColor(frame,cv2.COLOR_GRAY2RGB)
-    frame = numpy.rot90(frame)
-    frame = pg.surfarray.make_surface(frame)
+    if js.btn[0]:
+      return self.lastFrame
+    else:
+      retval,frame = self.camera.read()
+      if retval != True:
+        frame = self.lastFrame
+      frame = cv2.cvtColor(frame,cv2.COLOR_BGR2RGB)
+      if not self.color:
+        frame = cv2.cvtColor(frame,cv2.COLOR_BGR2GRAY)
+        frame = cv2.cvtColor(frame,cv2.COLOR_GRAY2RGB)
+      frame = numpy.rot90(frame)
+      frame = pg.surfarray.make_surface(frame)
+      self.lastFrame = frame
     return frame
 
   def blitCamFrame(self, screen, xy):
