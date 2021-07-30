@@ -4,6 +4,7 @@ import time
 from sys import argv, exit
 from pygame.locals import *
 import cv2
+import threading
 import numpy
 import traceback
 from struct import unpack
@@ -174,6 +175,11 @@ def listCams():
       index += 1
   return arr
 
+def getCamImg():
+  global curImg, stop
+  while not stop:
+    curImg = cam.getCamFrame()
+
 # Init pygame features
 pg.init()
 pg.font.init()
@@ -190,6 +196,9 @@ pg.time.set_timer(RQST, 1500)
 # Create classes
 js = joystick()
 cam = camera(int(argv[1]), True, (586, 442))
+
+# Setup Camera thread
+camThread = threading.Thread(target=getCamImg)
 
 # Colors
 WHITE = (255, 255, 255)
@@ -228,6 +237,9 @@ ctrl2 = 2
 MOTOR1 = 4
 MOTOR2 = 3
 MOTOR3 = 5
+
+# Start Camthread
+camThread.start()
 
 # Main loop
 try:
@@ -340,3 +352,5 @@ finally:
   # On exit, tell arduino to turn all motors off
   if not testing:
     ser.write(defualtMsg)
+  # Wait for camthread to stop
+  camThread.join()
