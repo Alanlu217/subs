@@ -278,7 +278,7 @@ try:
         msg[ctrl2] |= 0
 
       # Calculate motor 3 values / Up Down
-      mtr3 = int(((js.getAxis(RTrig) - js.getAxis(LTrig))/2))
+      mtr3 = -int(((js.getAxis(RTrig) - js.getAxis(LTrig))/2))
       msg[ctrl2] = getState(mtr3, msg[ctrl2])
       msg[MOTOR3] = abs(mtr3)
 
