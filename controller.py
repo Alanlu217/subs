@@ -283,12 +283,14 @@ try:
       msg[MOTOR3] = abs(mtr3)
 
       # Calculate motor 2 values / Right
-      mtr2 = -max(min(-js.getAxis(yjoy)-js.getAxis(xjoy), 255), -255)
+    #   mtr2 = -max(min(-js.getAxis(yjoy)-js.getAxis(xjoy), 255), -255)
+      mtr2 = -js.getAxis(5)
       msg[ctrl2] = getState(mtr2, msg[ctrl2])
       msg[MOTOR2] = abs(mtr2)
 
       # Calculate motor 1 values / Left
-      mtr1 = -max(min(-js.getAxis(yjoy)+js.getAxis(xjoy), 255), -255)
+      #mtr1 = -max(min(-js.getAxis(yjoy)+js.getAxis(xjoy), 255), -255)
+      mtr1 = -js.getAxis(1)
       msg[ctrl2] = getState(mtr1, msg[ctrl2])
       msg[MOTOR1] = abs(mtr1)
 
