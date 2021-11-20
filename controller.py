@@ -289,13 +289,13 @@ try:
 
       # Calculate motor 1 values / Left
       #mtr1 = -max(min(-js.getAxis(yjoy)+js.getAxis(xjoy), 255), -255)
-      mtr1 = max(min(int(js.getAxis(1)), 255), -255)
+      mtr1 = max(min(int(js.getAxis(5)), 255), -255)
       msg[ctrl2] = getState(mtr1, msg[ctrl2])
       msg[MOTOR1] = int(abs(mtr1))
 
       # Calculate motor 2 values / Right
     #   mtr2 = -max(min(-js.getAxis(yjoy)-js.getAxis(xjoy), 255), -255)
-      mtr2 = max(min(int(js.getAxis(5)), 255), -255)
+      mtr2 = -max(min(int(js.getAxis(1)), 255), -255)
       msg[ctrl2] = getState(mtr2, msg[ctrl2])
       msg[MOTOR2] = int(abs(mtr2))
 
