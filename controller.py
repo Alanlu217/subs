@@ -69,6 +69,9 @@ class joystick():
 
 
   def getAxis(self, i):
+    if i > len(self.axis):
+        print(f"Error {i}")
+        return None
     return self.axis[i]
 
   def getBtn(self, i):
@@ -277,22 +280,24 @@ try:
       else:
         msg[ctrl2] |= 0
 
+      """MOTOR ORDER MATTERS DO NOT REARRANGE"""
+
       # Calculate motor 3 values / Up Down
       mtr3 = -int(((js.getAxis(RTrig) - js.getAxis(LTrig))/2))
       msg[ctrl2] = getState(mtr3, msg[ctrl2])
       msg[MOTOR3] = abs(mtr3)
 
-      # Calculate motor 2 values / Right
-    #   mtr2 = -max(min(-js.getAxis(yjoy)-js.getAxis(xjoy), 255), -255)
-      mtr2 = -js.getAxis(5)
-      msg[ctrl2] = getState(mtr2, msg[ctrl2])
-      msg[MOTOR2] = abs(mtr2)
-
       # Calculate motor 1 values / Left
       #mtr1 = -max(min(-js.getAxis(yjoy)+js.getAxis(xjoy), 255), -255)
-      mtr1 = -js.getAxis(1)
+      mtr1 = max(min(int(js.getAxis(1)), 255), -255)
       msg[ctrl2] = getState(mtr1, msg[ctrl2])
-      msg[MOTOR1] = abs(mtr1)
+      msg[MOTOR1] = int(abs(mtr1))
+
+      # Calculate motor 2 values / Right
+    #   mtr2 = -max(min(-js.getAxis(yjoy)-js.getAxis(xjoy), 255), -255)
+      mtr2 = max(min(int(js.getAxis(5)), 255), -255)
+      msg[ctrl2] = getState(mtr2, msg[ctrl2])
+      msg[MOTOR2] = int(abs(mtr2))
 
       # Scale down values to fit under a set amount of amps
       total = msg[MOTOR1] + msg[MOTOR2] + msg[MOTOR3]
@@ -342,7 +347,7 @@ try:
 
     # If touchpad pressed, print debug info
     if js.btnP[13]: verbose = not verbose
-    if verbose: print([mtr1, mtr2, mtr3])
+    if verbose: print([msg[MOTOR1], msg[MOTOR2], msg[MOTOR3]])
 
     # Update display
     pg.display.flip()
