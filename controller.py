@@ -3,9 +3,6 @@ import pygame as pg
 import time
 from sys import argv, exit
 from pygame.locals import *
-import cv2
-import threading
-import numpy
 import traceback
 from struct import unpack
 
@@ -77,35 +74,6 @@ class joystick():
   def getBtn(self, i):
     return self.btn[i]
 
-class camera():
-  def __init__(self, camera_index, color, size):
-    self.camera = cv2.VideoCapture(camera_index)
-    self.camera.set(3, size[0])
-    self.camera.set(4, size[1])
-    self.color = color
-    self.size = size
-    self.lastFrame = None
-
-  def getCamFrame(self):
-    if js.btn[0]:
-      return self.lastFrame
-    else:
-      retval,frame = self.camera.read()
-      if retval != True:
-        frame = self.lastFrame
-      frame = cv2.cvtColor(frame,cv2.COLOR_BGR2RGB)
-      if not self.color:
-        frame = cv2.cvtColor(frame,cv2.COLOR_BGR2GRAY)
-        frame = cv2.cvtColor(frame,cv2.COLOR_GRAY2RGB)
-      frame = numpy.rot90(frame)
-      frame = pg.surfarray.make_surface(frame)
-      self.lastFrame = frame
-    return frame
-
-  def blitCamFrame(self, screen, xy):
-    frame = pg.transform.flip(pg.transform.scale(self.getCamFrame(), (self.size[0], self.size[1])), True, False)
-    screen.blit(frame, [xy[0]-self.size[0]/2, xy[1]-self.size[1]/2])
-
 def updateGUI():
   # Draw Joystick containers
   # Left Joystick
@@ -153,10 +121,6 @@ def updateGUI():
   text = fnt.render(f'Volts: {inpt[1]}', False, color2)
   screen.blit(text, [20, 140])
 
-  pg.draw.rect(screen, BLUE, [scrnDM[0]/2-cam.size[0]/2-12, scrnDM[1]/2-cam.size[1]/2-12, cam.size[0]+24, cam.size[1]+24])
-  pg.draw.rect(screen, BLACK, [scrnDM[0]/2-cam.size[0]/2-9, scrnDM[1]/2-cam.size[1]/2-9, cam.size[0]+18, cam.size[1]+18])
-  cam.blitCamFrame(screen, (scrnDM[0]/2, scrnDM[1]/2))
-
 def getState(val, msg):
   res = 0
   msg <<= 2
@@ -165,23 +129,6 @@ def getState(val, msg):
   elif val == 0: msg |= 0
   return msg
 
-def listCams():
-  index = 0
-  arr = []
-  while True:
-      cap = cv2.VideoCapture(index)
-      if not cap.read()[0]:
-          break
-      else:
-          arr.append(index)
-      cap.release()
-      index += 1
-  return arr
-
-def getCamImg():
-  global curImg, stop
-  while not stop:
-    curImg = cam.getCamFrame()
 
 # Init pygame features
 pg.init()
@@ -198,10 +145,6 @@ pg.time.set_timer(RQST, 1500)
 
 # Create classes
 js = joystick()
-cam = camera(int(argv[1]), True, (586, 442))
-
-# Setup Camera thread
-camThread = threading.Thread(target=getCamImg)
 
 # Colors
 WHITE = (255, 255, 255)
@@ -240,9 +183,6 @@ ctrl2 = 2
 MOTOR1 = 4
 MOTOR2 = 3
 MOTOR3 = 5
-
-# Start Camthread
-camThread.start()
 
 # Main loop
 try:
@@ -359,5 +299,3 @@ finally:
   # On exit, tell arduino to turn all motors off
   if not testing:
     ser.write(defualtMsg)
-  # Wait for camthread to stop
-  camThread.join()
